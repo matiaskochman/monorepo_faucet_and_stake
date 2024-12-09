@@ -1,0 +1,23 @@
+{
+  "name": "erc20_token",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "deploy-hardhat": "npx hardhat run scripts/deploy.js",
+    "copy-abis": "npx cpx 'artifacts/contracts/**/*.json' '../token_erc20_nextjs_faucet/src/app/abis'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.20.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.2",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.6.2"
+  }
+}

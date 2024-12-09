@@ -1,0 +1,805 @@
+// contracts/Faucet.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+// import "hardhat/console.sol";
+import "./MyToken.sol";
+
+contract Faucet {
+    MyToken public token;
+    uint256 public claimAmount = 200 * 10 ** 6; // 200 MTK con 18 decimales
+
+    mapping(address => bool) public hasClaimed;
+
+    // Eventos para seguir el flujo del contrato
+    event TokensClaimed(address indexed user, uint256 amount);
+    event ClaimRequested(address indexed user);
+
+    constructor(address tokenAddress) {
+        token = MyToken(tokenAddress);
+    }
+
+    function claimTokens() external {
+        // Emitir evento al iniciar el proceso de claim
+        emit ClaimRequested(msg.sender);
+        require(!hasClaimed[msg.sender], "Ya reclamaste tus tokens");
+        hasClaimed[msg.sender] = true;
+        // Llamada a la función mint del token
+        token.mint(msg.sender, claimAmount);
+        // Emitir eventos después de que los tokens han sido reclamados y minteados
+        emit TokensClaimed(msg.sender, claimAmount);
+    }
+}
+
+
+----------------------
+
+// contracts/MyToken.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyToken is ERC20, AccessControl, Ownable {
+    // Definir un rol para los minters
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    // Eventos
+    event BeforeMint(address indexed to, uint256 amount);
+    event Mint(address indexed to, uint256 amount);
+
+    constructor() ERC20("M Token", "MTK") {
+        // Otorgar el rol de admin al deployer del contrato
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    // Sobrescribir la función decimals para que el token tenga 6 decimales
+    function decimals() public view virtual override returns (uint8) {
+        return 6;
+    }
+
+    // Función para mintear tokens, solo callable por cuentas con el rol MINTER_ROLE
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+        emit BeforeMint(to, amount);
+        _mint(to, amount);
+        emit Mint(to, amount);
+    }
+}
+
+
+----------------------
+
+// contracts/Stake.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "./MyToken.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract Staking is ReentrancyGuard {
+    struct StakeInfo {
+        uint256 amount;
+        uint256 since;
+    }
+
+    MyToken public token;
+    mapping(address => StakeInfo) public stakes;
+    uint256 public constant REWARD_RATE = 1; // 0.1% per minute (for testing purposes)
+
+    event Staked(address indexed user, uint256 amount);
+    event Unstaked(address indexed user, uint256 amount, uint256 reward);
+
+    constructor(address _token) {
+        require(_token != address(0), "Token address cannot be zero");
+        token = MyToken(_token);
+    }
+
+    function stake(uint256 _amount) external nonReentrant {
+        require(_amount > 0, "Cannot stake 0 tokens");
+        require(
+            token.balanceOf(msg.sender) >= _amount,
+            "Insufficient token balance"
+        );
+        require(
+            token.allowance(msg.sender, address(this)) >= _amount,
+            "Insufficient allowance"
+        );
+
+        // Transferir tokens al contrato de staking
+        require(
+            token.transferFrom(msg.sender, address(this), _amount),
+            "Transfer failed"
+        );
+
+        uint256 reward = 0;
+
+        if (stakes[msg.sender].amount > 0) {
+            // Calcular recompensas acumuladas
+            reward = calculateReward(msg.sender);
+            if (reward > 0) {
+                // Mint de las recompensas al usuario
+                token.mint(msg.sender, reward);
+            }
+        }
+
+        // Actualizar el registro del stake del usuario
+        stakes[msg.sender].amount += _amount;
+        stakes[msg.sender].since = block.timestamp;
+
+        emit Staked(msg.sender, _amount);
+    }
+
+    function unstake(uint256 _amount) external nonReentrant {
+        StakeInfo storage userStake = stakes[msg.sender];
+        require(userStake.amount >= _amount, "Insufficient staked amount");
+
+        uint256 reward = calculateReward(msg.sender);
+        uint256 partialReward = (reward * _amount) / userStake.amount;
+
+        // Reducir el monto apostado y actualizar el tiempo
+        userStake.amount -= _amount;
+        if (userStake.amount > 0) {
+            userStake.since = block.timestamp;
+        } else {
+            delete stakes[msg.sender];
+        }
+
+        // Transferir el monto desapostado al usuario
+        require(token.transfer(msg.sender, _amount), "Transfer failed");
+
+        // Mint de las recompensas al usuario
+        if (partialReward > 0) {
+            token.mint(msg.sender, partialReward);
+        }
+
+        emit Unstaked(msg.sender, _amount, partialReward);
+    }
+
+    function calculateReward(address _user) public view returns (uint256) {
+        StakeInfo memory userStake = stakes[_user];
+        if (userStake.amount == 0) return 0;
+
+        uint256 timeStaked = block.timestamp - userStake.since;
+        return (userStake.amount * timeStaked * REWARD_RATE) / (1000 * 60); // Reward per minute
+    }
+
+    function getStakeInfo(
+        address _user
+    ) external view returns (uint256 amount, uint256 since) {
+        StakeInfo memory userStake = stakes[_user];
+        return (userStake.amount, userStake.since);
+    }
+
+    function getStakedAmount(address _user) external view returns (uint256) {
+        return stakes[_user].amount;
+    }
+}
+
+
+----------------------
+
+// test/faucetTest.js
+
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
+describe("Faucet", function () {
+  let myToken;
+  let faucet;
+  let owner;
+  let addr1;
+  let addr2;
+  const CLAIM_AMOUNT = ethers.parseUnits("200", 6); // 200 tokens con 6 decimales
+
+  async function deployContracts() {
+    const MyToken = await ethers.getContractFactory("MyToken");
+    const Faucet = await ethers.getContractFactory("Faucet");
+
+    myToken = await MyToken.deploy();
+    await myToken.waitForDeployment();
+    const myTokenAddress = await myToken.getAddress();
+
+    faucet = await Faucet.deploy(myTokenAddress);
+    await faucet.waitForDeployment();
+    const faucetAddress = await faucet.getAddress();
+
+    // Transferir propiedad de MyToken al Faucet
+    await myToken.transferOwnership(faucetAddress);
+
+    // Otorgar MINTER_ROLE al Faucet
+    const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
+    await myToken.grantRole(MINTER_ROLE, faucetAddress);
+  }
+
+  beforeEach(async function () {
+    [owner, addr1, addr2] = await ethers.getSigners();
+    await deployContracts();
+  });
+
+  describe("Deployment", function () {
+    it("Should set the correct token address", async function () {
+      expect(await faucet.token()).to.equal(await myToken.getAddress());
+    });
+
+    it("Should set the correct claim amount", async function () {
+      expect(await faucet.claimAmount()).to.equal(CLAIM_AMOUNT);
+    });
+
+    it("Should transfer token ownership to faucet", async function () {
+      expect(await myToken.owner()).to.equal(await faucet.getAddress());
+    });
+  });
+
+  describe("Token Claims", function () {
+    it("Should allow a user to claim tokens and emit correct events", async function () {
+      const claimTx = faucet.connect(addr1).claimTokens();
+
+      await expect(claimTx)
+        .to.emit(faucet, "ClaimRequested")
+        .withArgs(addr1.address)
+        .and.to.emit(faucet, "TokensClaimed")
+        .withArgs(addr1.address, CLAIM_AMOUNT)
+        .and.to.emit(myToken, "BeforeMint")
+        .withArgs(addr1.address, CLAIM_AMOUNT)
+        .and.to.emit(myToken, "Mint")
+        .withArgs(addr1.address, CLAIM_AMOUNT);
+
+      expect(await myToken.balanceOf(addr1.address)).to.equal(CLAIM_AMOUNT);
+    });
+
+    it("Should prevent double claims", async function () {
+      await faucet.connect(addr1).claimTokens();
+      await expect(faucet.connect(addr1).claimTokens()).to.be.revertedWith(
+        "Ya reclamaste tus tokens"
+      );
+    });
+
+    it("Should track claims correctly in mapping", async function () {
+      expect(await faucet.hasClaimed(addr1.address)).to.be.false;
+      await faucet.connect(addr1).claimTokens();
+      expect(await faucet.hasClaimed(addr1.address)).to.be.true;
+    });
+  });
+});
+
+
+----------------------
+
+// test/stakeTest.js
+
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+const { parseUnits } = ethers;
+
+describe("Staking", function () {
+  let myToken;
+  let stakingContract;
+  let stakingAddress;
+  let owner;
+  let user;
+  let stakeAmount;
+
+  beforeEach(async function () {
+    [owner, user] = await ethers.getSigners();
+    stakeAmount = parseUnits("10", 6); // 10 tokens con 6 decimales
+
+    // Deploy MyToken contract
+    const MyToken = await ethers.getContractFactory("MyToken");
+    myToken = await MyToken.deploy();
+    await myToken.waitForDeployment();
+    const myTokenAddress = await myToken.getAddress();
+
+    // Otorgar MINTER_ROLE al owner
+    const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
+    await myToken.grantRole(MINTER_ROLE, owner.address);
+
+    // Deploy Staking contract
+    const Staking = await ethers.getContractFactory("Staking");
+    stakingContract = await Staking.deploy(myTokenAddress);
+    await stakingContract.waitForDeployment();
+    stakingAddress = await stakingContract.getAddress();
+
+    // Grant MINTER_ROLE to Staking contract
+    await myToken.grantRole(MINTER_ROLE, stakingAddress);
+
+    // Mint tokens for testing - mint extra for rewards
+    const initialMint = parseUnits("2000", 6);
+    await myToken.mint(owner.address, initialMint);
+
+    // Transfer tokens to user for testing
+    await myToken.transfer(user.address, stakeAmount);
+  });
+
+  it("Should allow user to stake tokens", async function () {
+    // Verify user has enough tokens
+    const userBalance = await myToken.balanceOf(user.address);
+    expect(userBalance).to.be.gte(stakeAmount);
+
+    // Approve tokens for staking contract
+    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+
+    // Store initial stake balance
+    const initialStakeBalance = await stakingContract.getStakeInfo(
+      user.address
+    );
+
+    // Perform staking
+    await stakingContract.connect(user).stake(stakeAmount);
+
+    // Verify user's stake balance has increased
+    const updatedStakeBalance = await stakingContract.getStakeInfo(
+      user.address
+    );
+    expect(updatedStakeBalance.amount).to.equal(
+      initialStakeBalance.amount + stakeAmount
+    );
+  });
+
+  it("Should allow user to unstake tokens fully", async function () {
+    // Approve and stake tokens
+    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await stakingContract.connect(user).stake(stakeAmount);
+
+    // Advance time by 10 minutes
+    await ethers.provider.send("evm_increaseTime", [600]);
+    await ethers.provider.send("evm_mine", []);
+
+    // Calculate reward for the full unstake
+    const fullReward = await stakingContract.calculateReward(user.address);
+
+    // Store initial balance
+    const initialBalance = await myToken.balanceOf(user.address);
+
+    // Unstake the full amount
+    await stakingContract.connect(user).unstake(stakeAmount);
+
+    // Get final balance and calculate expected final balance
+    const finalBalance = await myToken.balanceOf(user.address);
+    const expectedFinalBalance = initialBalance + stakeAmount + fullReward;
+
+    // Verify final balance with tolerance
+    const tolerance = parseUnits("0.001", 6); // 0.001 tokens tolerance
+    expect(finalBalance).to.be.closeTo(expectedFinalBalance, tolerance);
+
+    // Verify that stake balance is now zero
+    const remainingStake = await stakingContract.getStakeInfo(user.address);
+    expect(remainingStake.amount).to.equal(0);
+  });
+
+  it("Should allow partial unstaking with proportional rewards", async function () {
+    // Approve and stake tokens
+    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await stakingContract.connect(user).stake(stakeAmount);
+
+    // Advance time by 10 minutes to accumulate rewards
+    await ethers.provider.send("evm_increaseTime", [600]);
+    await ethers.provider.send("evm_mine", []);
+
+    const partialUnstakeAmount = parseUnits("5", 6); // Unstake 5 tokens
+
+    // Calculate expected reward before unstaking
+    const totalReward = await stakingContract.calculateReward(user.address);
+    const partialReward = (totalReward * partialUnstakeAmount) / stakeAmount;
+
+    // Store initial balance
+    const initialBalance = await myToken.balanceOf(user.address);
+
+    // Perform partial unstaking
+    await stakingContract.connect(user).unstake(partialUnstakeAmount);
+
+    // Get final balance after partial unstake
+    const finalBalance = await myToken.balanceOf(user.address);
+
+    // Calculate expected final balance
+    const expectedFinalBalance =
+      initialBalance + partialUnstakeAmount + partialReward;
+
+    // Verify final balance with tolerance
+    const tolerance = parseUnits("0.001", 6); // 0.001 tokens tolerance
+    expect(finalBalance).to.be.closeTo(expectedFinalBalance, tolerance);
+
+    // Verify remaining stake balance
+    const remainingStake = await stakingContract.getStakeInfo(user.address);
+    expect(remainingStake.amount).to.equal(stakeAmount - partialUnstakeAmount);
+  });
+});
+
+
+----------------------
+
+// scripts/deploy.js
+
+const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
+
+async function main() {
+  const [deployer] = await hre.ethers.getSigners();
+  console.log("Desplegando contratos con la cuenta:", deployer.address);
+
+  // Desplegar MyToken
+  const MyToken = await hre.ethers.getContractFactory("MyToken");
+  console.log("Desplegando MyToken...");
+  const myToken = await MyToken.deploy();
+  await myToken.waitForDeployment();
+  const myTokenAddress = await myToken.getAddress();
+  console.log("MyToken desplegado en:", myTokenAddress);
+
+  // Verificar la existencia del contrato MyToken en la blockchain
+  const myTokenCode = await hre.ethers.provider.getCode(myTokenAddress);
+  if (myTokenCode === "0x") {
+    console.error(
+      "Error: No existe un contrato MyToken en la dirección:",
+      myTokenAddress
+    );
+    return;
+  } else {
+    console.log("Contrato MyToken verificado en la blockchain.");
+  }
+
+  // Desplegar Faucet pasando la dirección de MyToken
+  const Faucet = await hre.ethers.getContractFactory("Faucet");
+  console.log("Desplegando Faucet...");
+  const faucet = await Faucet.deploy(myTokenAddress);
+  await faucet.waitForDeployment();
+  const faucetAddress = await faucet.getAddress();
+  console.log("Faucet desplegado en:", faucetAddress);
+
+  // Verificar la existencia del contrato Faucet en la blockchain
+  const faucetCode = await hre.ethers.provider.getCode(faucetAddress);
+  if (faucetCode === "0x") {
+    console.error(
+      "Error: No existe un contrato Faucet en la dirección:",
+      faucetAddress
+    );
+    return;
+  } else {
+    console.log("Contrato Faucet verificado en la blockchain.");
+  }
+
+  // Desplegar Staking pasando la dirección de MyToken
+  const Staking = await hre.ethers.getContractFactory("Staking");
+  console.log("Desplegando Staking...");
+  const staking = await Staking.deploy(myTokenAddress);
+  await staking.waitForDeployment();
+  const stakingAddress = await staking.getAddress();
+  console.log("Staking desplegado en:", stakingAddress);
+
+  // Verificar la existencia del contrato Staking en la blockchain
+  const stakingCode = await hre.ethers.provider.getCode(stakingAddress);
+  if (stakingCode === "0x") {
+    console.error(
+      "Error: No existe un contrato Staking en la dirección:",
+      stakingAddress
+    );
+    return;
+  } else {
+    console.log("Contrato Staking verificado en la blockchain.");
+  }
+
+  // Transferir la propiedad de MyToken al Faucet
+  console.log("Transfiriendo propiedad de MyToken al Faucet...");
+  const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
+  await transferOwnershipTx.wait();
+  console.log("Propiedad de MyToken transferida al Faucet.");
+
+  // Otorgar el rol de MINTER_ROLE al contrato de Staking
+  console.log("Otorgando MINTER_ROLE al contrato de Staking...");
+  const MINTER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("MINTER_ROLE")
+  );
+
+  const grantRoleTx = await myToken.grantRole(MINTER_ROLE, stakingAddress);
+  await grantRoleTx.wait();
+  console.log("MINTER_ROLE otorgado al contrato de Staking.");
+
+  // Copiar los archivos específicos al directorio `token_erc20_nextjs_faucet/src/abis` en `CLAIM_AND_STAKE`
+  const artifactsPath = path.join(__dirname, "../artifacts");
+  const destinationPath = path.join(
+    __dirname,
+    "../../token_erc20_nextjs_faucet/src/abis"
+  );
+  const filesToCopy = ["Faucet.json", "MyToken.json", "Staking.json"];
+
+  console.log("Copiando archivos específicos desde artifacts a abis...");
+  copySpecificJsonFiles(artifactsPath, destinationPath, filesToCopy);
+  console.log("Archivos copiados exitosamente.");
+}
+
+// Función para copiar archivos específicos
+function copySpecificJsonFiles(sourceDir, destDir, filesToCopy) {
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+
+  const files = fs.readdirSync(sourceDir);
+  files.forEach((file) => {
+    const fullPath = path.join(sourceDir, file);
+    const stat = fs.statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      // Recursión en subdirectorios
+      copySpecificJsonFiles(fullPath, destDir, filesToCopy);
+    } else if (stat.isFile() && filesToCopy.includes(file)) {
+      // Copiar archivo específico
+      const destFile = path.join(destDir, file);
+      fs.copyFileSync(fullPath, destFile);
+      console.log(`Archivo copiado: ${file}`);
+    }
+  });
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Error en el despliegue:", error);
+    process.exit(1);
+  });
+
+// const hre = require("hardhat");
+// const fs = require("fs");
+// const path = require("path");
+
+// async function main() {
+//   const [deployer] = await hre.ethers.getSigners();
+//   console.log("Desplegando contratos con la cuenta:", deployer.address);
+
+//   // Desplegar MyToken
+//   const MyToken = await hre.ethers.getContractFactory("MyToken");
+//   console.log("Desplegando MyToken...");
+//   const myToken = await MyToken.deploy();
+//   await myToken.waitForDeployment();
+//   const myTokenAddress = await myToken.getAddress();
+//   console.log("MyToken desplegado en:", myTokenAddress);
+
+//   // Verificar la existencia del contrato MyToken en la blockchain
+//   const myTokenCode = await hre.ethers.provider.getCode(myTokenAddress);
+//   if (myTokenCode === "0x") {
+//     console.error(
+//       "Error: No existe un contrato MyToken en la dirección:",
+//       myTokenAddress
+//     );
+//     return;
+//   } else {
+//     console.log("Contrato MyToken verificado en la blockchain.");
+//   }
+
+//   // Desplegar Faucet pasando la dirección de MyToken
+//   const Faucet = await hre.ethers.getContractFactory("Faucet");
+//   console.log("Desplegando Faucet...");
+//   const faucet = await Faucet.deploy(myTokenAddress);
+//   await faucet.waitForDeployment();
+//   const faucetAddress = await faucet.getAddress();
+//   console.log("Faucet desplegado en:", faucetAddress);
+
+//   // Verificar la existencia del contrato Faucet en la blockchain
+//   const faucetCode = await hre.ethers.provider.getCode(faucetAddress);
+//   if (faucetCode === "0x") {
+//     console.error(
+//       "Error: No existe un contrato Faucet en la dirección:",
+//       faucetAddress
+//     );
+//     return;
+//   } else {
+//     console.log("Contrato Faucet verificado en la blockchain.");
+//   }
+
+//   // Desplegar Staking pasando la dirección de MyToken
+//   const Staking = await hre.ethers.getContractFactory("Staking");
+//   console.log("Desplegando Staking...");
+//   const staking = await Staking.deploy(myTokenAddress);
+//   await staking.waitForDeployment();
+//   const stakingAddress = await staking.getAddress();
+//   console.log("Staking desplegado en:", stakingAddress);
+
+//   // Verificar la existencia del contrato Staking en la blockchain
+//   const stakingCode = await hre.ethers.provider.getCode(stakingAddress);
+//   if (stakingCode === "0x") {
+//     console.error(
+//       "Error: No existe un contrato Staking en la dirección:",
+//       stakingAddress
+//     );
+//     return;
+//   } else {
+//     console.log("Contrato Staking verificado en la blockchain.");
+//   }
+
+//   // Transferir la propiedad de MyToken al Faucet
+//   console.log("Transfiriendo propiedad de MyToken al Faucet...");
+//   const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
+//   await transferOwnershipTx.wait();
+//   console.log("Propiedad de MyToken transferida al Faucet.");
+
+//   // Otorgar el rol de MINTER_ROLE al contrato de Staking
+//   console.log("Otorgando MINTER_ROLE al contrato de Staking...");
+//   const MINTER_ROLE = hre.ethers.keccak256(
+//     hre.ethers.toUtf8Bytes("MINTER_ROLE")
+//   );
+
+//   const grantRoleTx = await myToken.grantRole(MINTER_ROLE, stakingAddress);
+//   await grantRoleTx.wait();
+//   console.log("MINTER_ROLE otorgado al contrato de Staking.");
+
+//   // ... Resto de tu código para copiar ABIs
+// }
+
+// main()
+//   .then(() => process.exit(0))
+//   .catch((error) => {
+//     console.error("Error en el despliegue:", error);
+//     process.exit(1);
+//   });
+
+
+----------------------
+
+// scripts/getBalance.js
+
+const hre = require("hardhat");
+
+async function main() {
+  // Obtener los signers disponibles (cuentas)
+  console.log("Obteniendo signers...");
+  const [owner] = await hre.ethers.getSigners();
+  console.log(`Signer (owner): ${owner.address}`);
+
+  // Verificar si la dirección del contrato es correcta
+  const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Reemplaza con la dirección de tu contrato MyToken
+  console.log(`Dirección del contrato MyToken: ${tokenAddress}`);
+
+  const tokenABI = [
+    "function balanceOf(address account) view returns (uint256)",
+  ];
+
+  // Crear una instancia del contrato con ethers
+  console.log("Creando la instancia del contrato MyToken...");
+  const tokenContract = new hre.ethers.Contract(tokenAddress, tokenABI, owner);
+
+  // Intentar obtener el balance
+  console.log(`Obteniendo balance del owner: ${owner.address}`);
+  try {
+    const balance = await tokenContract.balanceOf(owner.address);
+    console.log(`Balance obtenido: ${balance.toString()}`);
+    console.log(
+      `Balance de MyToken: ${hre.ethers.utils.formatUnits(balance, 18)} tokens`
+    );
+  } catch (error) {
+    console.error("Error al obtener el balance:", error);
+  }
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Error en la ejecución del script:", error);
+    process.exit(1);
+  });
+
+
+----------------------
+
+// hardhat.config.js
+
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      // viaIR: true, // Comentado o eliminado
+    },
+  },
+  networks: {
+    hardhat: {
+      accounts: {
+        count: 50,
+        accountsBalance: "10000000000000000000000", // 10000 ETH
+      },
+      mining: {
+        auto: true,
+        interval: 5000, // Intervalo de minado en ms
+        mempool: {
+          order: "fifo", // First in, first out
+        },
+      },
+      // hardfork: "shanghai", // Especifica el hardfork
+      chainId: 41337,
+      blockGasLimit: 30000000,
+      gasPrice: "auto",
+      throwOnTransactionFailures: true,
+      throwOnCallFailures: true,
+      allowUnlimitedContractSize: false, // Mantener en false para simular mainnet
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      chainId: 41337,
+      timeout: 60000,
+    },
+  },
+  // paths: {
+  //   sources: "./contracts",
+  //   tests: "./test",
+  //   cache: "./cache",
+  //   artifacts: "./artifacts",
+  //   deploy: "./deploy",
+  // },
+  // gasReporter: {
+  //   enabled: process.env.REPORT_GAS !== undefined,
+  //   currency: "USD",
+  //   outputFile: "gas-report.txt",
+  //   noColors: true,
+  //   coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+  //   token: "ETH",
+  // },
+  // contractSizer: {
+  //   alphaSort: true,
+  //   runOnCompile: true,
+  //   disambiguatePaths: false,
+  //   strict: true,
+  //   only: [],
+  //   except: [],
+  // },
+  // mocha: {
+  //   timeout: 200000, // 200 segundos
+  // },
+  // etherscan: {
+  //   apiKey: process.env.ETHERSCAN_API_KEY,
+  // },
+  // verify: {
+  //   etherscan: {
+  //     apiKey: process.env.ETHERSCAN_API_KEY,
+  //   },
+  // },
+};
+
+// // Manejo de tareas condicionales
+// if (process.env.REPORT_GAS) {
+//   require("hardhat-gas-reporter");
+// }
+
+// if (process.env.ENABLE_COVERAGE) {
+//   require("solidity-coverage");
+// }
+
+
+----------------------
+
+// package.json
+
+{
+  "name": "mi-nuevo-token-erc20",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "deploy-hardhat": "npx hardhat run scripts/deploy.js",
+    "copy-abis": "npx cpx 'artifacts/contracts/**/*.json' '../token_erc20_nextjs_faucet/src/app/abis'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.20.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.2",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.6.2"
+  }
+}
+
+
+----------------------
