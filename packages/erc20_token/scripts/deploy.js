@@ -94,10 +94,7 @@ async function main() {
 
   // Copiar los archivos específicos al directorio `token_erc20_nextjs_faucet/src/abis` en `CLAIM_AND_STAKE`
   const artifactsPath = path.join(__dirname, "../artifacts");
-  const destinationPath = path.join(
-    __dirname,
-    "../../token_erc20_nextjs_faucet/src/abis"
-  );
+  const destinationPath = path.join(__dirname, "../../abis");
   const filesToCopy = ["Faucet.json", "MyToken.json", "Staking.json"];
 
   console.log("Copiando archivos específicos desde artifacts a abis...");

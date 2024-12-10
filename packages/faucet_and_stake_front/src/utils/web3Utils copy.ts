@@ -17,6 +17,7 @@ const stakingAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
 const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const faucetAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
+// Exact type matching Web3Modal's IProviderOptions
 function createProviderOptions(): IProviderOptions {
   return {
     injected: {
@@ -36,41 +37,6 @@ function createProviderOptions(): IProviderOptions {
   };
 }
 
-async function connectWithTimeout(
-  web3Modal: Web3Modal,
-  timeout: number = 10000
-): Promise<any> {
-  return new Promise(async (resolve, reject) => {
-    // Set up timeout
-    const timer = setTimeout(() => {
-      reject(new Error("Connection timeout"));
-    }, timeout);
-
-    try {
-      // Try Web3Modal connection
-      const instance = await web3Modal.connect();
-      clearTimeout(timer);
-      resolve(instance);
-    } catch (error) {
-      clearTimeout(timer);
-
-      // Fallback connection methods
-      try {
-        // Direct MetaMask connection
-        if (window.ethereum && window.ethereum.isMetaMask) {
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          resolve(window.ethereum);
-          return;
-        }
-      } catch (fallbackError) {
-        reject(fallbackError);
-      }
-
-      reject(error);
-    }
-  });
-}
-
 export const connectWallet = async (
   setProvider: (provider: ethers.BrowserProvider | null) => void,
   setSigner: (signer: ethers.JsonRpcSigner | null) => void,
@@ -83,14 +49,20 @@ export const connectWallet = async (
   desiredChainId: bigint
 ) => {
   try {
+    // const web3Modal = new Web3Modal();
+    // const instance = await web3Modal.connect();
+    // const provider = new ethers.BrowserProvider(instance);
+    // const signer = await provider.getSigner();
+    // const address = await signer.getAddress();
+    // const network = await provider.getNetwork();
+
     const web3Modal = new Web3Modal({
       cacheProvider: true,
       providerOptions: createProviderOptions(),
       disableInjectedProvider: false,
     });
 
-    // Connect to the wallet with enhanced connection method
-    // const instance = await connectWithTimeout(web3Modal);
+    // Connect to the wallet
     const instance = await web3Modal.connect();
 
     // Create ethers provider
