@@ -13,9 +13,13 @@ import tokenAbi from "../../../abis/MyToken.json";
 import faucetAbi from "../../../abis//Faucet.json";
 import stakingAbi from "../../../abis/Staking.json";
 
-const stakingAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const faucetAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+// const stakingAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+// const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+// const faucetAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+
+export const ERC20_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+export const STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+export const FAUCET_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 function createProviderOptions(): IProviderOptions {
   return {
@@ -147,7 +151,7 @@ export const fetchTokenBalance = async (
     console.log("fetchTokenBalance");
 
     const tokenContract = new ethers.Contract(
-      tokenAddress,
+      ERC20_ADDRESS,
       tokenAbi.abi,
       signer
     );
@@ -172,7 +176,7 @@ export const fetchStakedAmount = async (
     }
 
     const stakingContract = new ethers.Contract(
-      stakingAddress,
+      STAKING_ADDRESS,
       stakingAbi.abi,
       signer
     );
@@ -211,7 +215,7 @@ export const claimTokens = async (
     setError(null);
 
     const faucetContract = new ethers.Contract(
-      faucetAddress,
+      FAUCET_ADDRESS,
       faucetAbi.abi,
       signer
     );
@@ -234,12 +238,16 @@ export const claimTokens = async (
 // Función para aprobar tokens
 export const approveTokens = async (
   amount: number,
-  tokenAddress: string,
+  ERC20_ADDRESS: string,
   spenderAddress: string,
   signer: ethers.JsonRpcSigner
 ) => {
   console.log("approveTokens");
-  const tokenContract = new ethers.Contract(tokenAddress, tokenAbi.abi, signer);
+  const tokenContract = new ethers.Contract(
+    ERC20_ADDRESS,
+    tokenAbi.abi,
+    signer
+  );
   const tx = await tokenContract.approve(
     spenderAddress,
     ethers.parseUnits(amount.toString(), 6)
@@ -265,9 +273,8 @@ export const stakeTokens = async (
     return;
   }
 
-  const stakingAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
   const stakingContract = new ethers.Contract(
-    stakingAddress,
+    STAKING_ADDRESS,
     stakingAbi.abi,
     signer
   );
@@ -280,7 +287,7 @@ export const stakeTokens = async (
     await approveTokens(
       amount,
       "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-      stakingAddress,
+      STAKING_ADDRESS,
       signer
     );
     const tx = await stakingContract.stake(amountInTokens);
@@ -320,7 +327,7 @@ export const unstakeTokens = async (
   }
 
   const stakingContract = new ethers.Contract(
-    stakingAddress,
+    STAKING_ADDRESS,
     stakingAbi.abi,
     signer
   );
@@ -399,11 +406,11 @@ export const checkStakingContractBalance = async (
 ) => {
   try {
     const tokenContract = new ethers.Contract(
-      tokenAddress,
+      ERC20_ADDRESS,
       tokenAbi.abi,
       signer
     );
-    const stakingBalance = await tokenContract.balanceOf(stakingAddress);
+    const stakingBalance = await tokenContract.balanceOf(STAKING_ADDRESS);
     console.log(
       "Balance del contrato de staking (en wei):",
       stakingBalance.toString()

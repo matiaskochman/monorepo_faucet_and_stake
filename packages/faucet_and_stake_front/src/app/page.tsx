@@ -10,10 +10,15 @@ import {
 } from "@/utils/web3Utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
+// import { formatDistanceToNow } from "date-fns";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
-import { fetchStakedAmount } from "@/utils/web3Utils";
+import {
+  STAKING_ADDRESS,
+  ERC20_ADDRESS,
+  FAUCET_ADDRESS,
+} from "@/utils/web3Utils";
+// import { fetchStakedAmount } from "@/utils/web3Utils";
 
 export default function Web3TokenDashboard() {
   const [balance, setBalance] = useState<number>(0);
@@ -166,7 +171,7 @@ export default function Web3TokenDashboard() {
   };
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-full max-w-md">
+      <Card className="max-w-[39rem]">
         <CardHeader>
           <CardTitle>Web3 Token Dashboard</CardTitle>
         </CardHeader>
@@ -181,11 +186,27 @@ export default function Web3TokenDashboard() {
             </Button>
           ) : (
             <>
+              {/* Direcciones de los contratos */}
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between">
+                  <span>Contrato ERC20:</span>
+                  <span className="font-mono">{ERC20_ADDRESS}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Contrato Staking:</span>
+                  <span className="font-mono">{STAKING_ADDRESS}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Contrato Faucet:</span>
+                  <span className="font-mono">{FAUCET_ADDRESS}</span>
+                </div>
+              </div>
+              <br></br>
+              <br></br>
+
               <div className="flex justify-between">
                 <span>Cuenta:</span>
-                <span className="font-bold">
-                  {account?.slice(0, 6)}...{account?.slice(-4)}
-                </span>
+                <span className="font-bold">{account}</span>
               </div>
               <div className="flex justify-between">
                 <span>Balance:</span>
