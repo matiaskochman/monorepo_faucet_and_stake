@@ -12,8 +12,8 @@ async function main() {
   const MyToken = await hre.ethers.getContractFactory("MyToken");
   console.log("Desplegando MyToken...");
   const myToken = await MyToken.deploy();
-  await myToken.deployed(); // Ethers.js v6 soporta .deployed()
-  const myTokenAddress = myToken.address;
+  await myToken.waitForDeployment(); // En ethers v6 se usa waitForDeployment()
+  const myTokenAddress = await myToken.getAddress();
   console.log("MyToken desplegado en:", myTokenAddress);
 
   // Verificar la existencia del contrato MyToken en la blockchain
@@ -32,8 +32,8 @@ async function main() {
   const Faucet = await hre.ethers.getContractFactory("Faucet");
   console.log("Desplegando Faucet...");
   const faucet = await Faucet.deploy(myTokenAddress);
-  await faucet.deployed(); // Ethers.js v6 soporta .deployed()
-  const faucetAddress = faucet.address;
+  await faucet.waitForDeployment();
+  const faucetAddress = await faucet.getAddress();
   console.log("Faucet desplegado en:", faucetAddress);
 
   // Verificar la existencia del contrato Faucet en la blockchain
@@ -52,8 +52,8 @@ async function main() {
   const Staking = await hre.ethers.getContractFactory("Staking");
   console.log("Desplegando Staking...");
   const staking = await Staking.deploy(myTokenAddress);
-  await staking.deployed(); // Ethers.js v6 soporta .deployed()
-  const stakingAddress = staking.address;
+  await staking.waitForDeployment();
+  const stakingAddress = await staking.getAddress();
   console.log("Staking desplegado en:", stakingAddress);
 
   // Verificar la existencia del contrato Staking en la blockchain
@@ -108,7 +108,7 @@ async function main() {
   await grantSetterRoleTx.wait();
   console.log("SETTER_ROLE otorgado al deployer.");
 
-  // Copiar los archivos específicos al directorio `token_erc20_nextjs_faucet/src/abis` en `CLAIM_AND_STAKE`
+  // Copiar los archivos específicos al directorio abis
   const artifactsPath = path.join(__dirname, "../artifacts");
   const destinationPath = path.join(__dirname, "../../abis");
   const filesToCopy = ["Faucet.json", "MyToken.json", "Staking.json"];
