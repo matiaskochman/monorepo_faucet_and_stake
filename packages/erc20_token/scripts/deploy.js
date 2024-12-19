@@ -1,3 +1,5 @@
+// scripts/deploy.js
+
 const hre = require("hardhat");
 const fs = require("fs");
 const path = require("path");
@@ -10,8 +12,8 @@ async function main() {
   const MyToken = await hre.ethers.getContractFactory("MyToken");
   console.log("Desplegando MyToken...");
   const myToken = await MyToken.deploy();
-  await myToken.waitForDeployment();
-  const myTokenAddress = await myToken.getAddress();
+  await myToken.deployed(); // Ethers.js v6 soporta .deployed()
+  const myTokenAddress = myToken.address;
   console.log("MyToken desplegado en:", myTokenAddress);
 
   // Verificar la existencia del contrato MyToken en la blockchain
@@ -30,8 +32,8 @@ async function main() {
   const Faucet = await hre.ethers.getContractFactory("Faucet");
   console.log("Desplegando Faucet...");
   const faucet = await Faucet.deploy(myTokenAddress);
-  await faucet.waitForDeployment();
-  const faucetAddress = await faucet.getAddress();
+  await faucet.deployed(); // Ethers.js v6 soporta .deployed()
+  const faucetAddress = faucet.address;
   console.log("Faucet desplegado en:", faucetAddress);
 
   // Verificar la existencia del contrato Faucet en la blockchain
@@ -50,8 +52,8 @@ async function main() {
   const Staking = await hre.ethers.getContractFactory("Staking");
   console.log("Desplegando Staking...");
   const staking = await Staking.deploy(myTokenAddress);
-  await staking.waitForDeployment();
-  const stakingAddress = await staking.getAddress();
+  await staking.deployed(); // Ethers.js v6 soporta .deployed()
+  const stakingAddress = staking.address;
   console.log("Staking desplegado en:", stakingAddress);
 
   // Verificar la existencia del contrato Staking en la blockchain
@@ -84,13 +86,27 @@ async function main() {
     stakingAddress
   );
   await grantRoleStakingTx.wait();
-  console.log("MINTER_ROLE otorgado al contrato de Staking.");
+  console.log("MINTER_ROLE otorgado al contrato Staking.");
 
-  // **Nuevo: Otorgar el rol de MINTER_ROLE al contrato Faucet**
+  // Otorgar el rol de MINTER_ROLE al contrato Faucet
   console.log("Otorgando MINTER_ROLE al contrato Faucet...");
   const grantRoleFaucetTx = await myToken.grantRole(MINTER_ROLE, faucetAddress);
   await grantRoleFaucetTx.wait();
   console.log("MINTER_ROLE otorgado al contrato Faucet.");
+
+  // Definir el hash del rol SETTER_ROLE
+  const SETTER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("SETTER_ROLE")
+  );
+
+  // Otorgar el rol de SETTER_ROLE al deployer
+  console.log("Otorgando SETTER_ROLE al deployer...");
+  const grantSetterRoleTx = await faucet.grantRole(
+    SETTER_ROLE,
+    deployer.address
+  );
+  await grantSetterRoleTx.wait();
+  console.log("SETTER_ROLE otorgado al deployer.");
 
   // Copiar los archivos específicos al directorio `token_erc20_nextjs_faucet/src/abis` en `CLAIM_AND_STAKE`
   const artifactsPath = path.join(__dirname, "../artifacts");
