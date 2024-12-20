@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React, { useEffect, useState } from "react";
 import { useReadContract } from "wagmi";
@@ -33,19 +34,10 @@ const TokenBalance = ({ address }: { address: string }) => {
     functionName: "balanceOf",
     args: [address],
   });
-
-  useEffect(() => {
-    if (contractError) {
-      setError(`Error al leer el contrato: ${contractError.message}`);
-    } else if (data) {
-      try {
-        const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
-        setBalance(formattedBalance);
-      } catch (formatError) {
-        setError("Error al formatear el balance recibido.");
-      }
-    }
-  }, [data, contractError]);
+  let formattedBalance = 0;
+  if (data) {
+    formattedBalance = parseFloat(ethers.formatUnits(data, 6)) | 0;
+  }
 
   if (error) {
     return <div style={{ color: "red" }}>Error: {error}</div>;
@@ -53,8 +45,8 @@ const TokenBalance = ({ address }: { address: string }) => {
 
   return (
     <div>
-      {data !== null
-        ? `Balance: ${data?.toLocaleString()} tokens`
+      {formattedBalance !== null
+        ? `Balance: ${formattedBalance?.toLocaleString()} tokens`
         : "Cargando balance..."}
     </div>
   );

@@ -12,7 +12,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
-
+import { TokenBalance } from "../components/ui/TokenBalance";
+import ClaimTokens from "@/components/ui/ClaimTokens";
 function App() {
   const [erc20TokenBalance, setErc20TokenBalance] = useState<number>(0);
   const [stakedAmount, setStakedAmount] = useState<number>(0);
@@ -21,14 +22,14 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [showError, setShowError] = useState<string | null>(null);
 
-  const TokenBalance = dynamic(
-    () =>
-      import("../components/ui/TokenBalance").then((mod) => mod.TokenBalance),
-    {
-      ssr: false,
-      loading: () => <div>Cargando balance...</div>, // Asegúrate de usar un fallback consistente
-    }
-  );
+  // const TokenBalance = dynamic(
+  //   () =>
+  //     import("../components/ui/TokenBalance").then((mod) => mod.TokenBalance),
+  //   {
+  //     ssr: false,
+  //     loading: () => <div>Cargando balance...</div>, // Asegúrate de usar un fallback consistente
+  //   }
+  // );
 
   const account = useAccount();
 
@@ -69,26 +70,28 @@ function App() {
           <div>
             <h2>Account</h2>
             <br />
-            <div className="flex justify-between">
+            <div className="flex justify-between py-2">
               <span>status:</span>
               <span className="font-mono">{account.status}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between py-2">
               <span>addresses:</span>
               <span className="font-mono">
                 {JSON.stringify(account.addresses)}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between py-2">
               <span>chainId:</span>
               <span className="font-mono">{account.chainId}</span>
             </div>
 
-            {account.status === "connected" && (
-              <Button type="button" onClick={() => disconnect()}>
-                Disconnect
-              </Button>
-            )}
+            <div className="flex justify-between py-2">
+              {account.status === "connected" && (
+                <Button type="button" onClick={() => disconnect()}>
+                  Disconnect
+                </Button>
+              )}
+            </div>
           </div>
 
           <div>
@@ -105,11 +108,20 @@ function App() {
             <div>{status}</div>
             <div>{error?.message}</div>
           </div>
-          {account?.status === "connected" && (
-            <div>
-              <TokenBalance address={account?.addresses[0]} />
-            </div>
-          )}
+          <div className="flex justify-between py-2">
+            {account?.status === "connected" && (
+              <div>
+                <TokenBalance address={account?.addresses[0]} />
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between py-2">
+            {account?.status === "connected" && (
+              <div>
+                <ClaimTokens />
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
