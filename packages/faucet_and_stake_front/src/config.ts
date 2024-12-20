@@ -3,6 +3,9 @@ import { mainnet, sepolia } from "wagmi/chains";
 import { injected, metaMask, safe } from "wagmi/connectors";
 import { defineChain } from "viem";
 
+import { config as dotenvConfig } from "dotenv";
+dotenvConfig();
+
 // Definir la red personalizada localhost con chainId 41337
 const localhost = defineChain({
   id: 41337,
@@ -27,6 +30,33 @@ const localhost = defineChain({
   testnet: true, // Marcar como testnet
 });
 
+// Definir la Fantom testnet (chainId: 4002)
+const fantomTestnet = defineChain({
+  id: 4002,
+  name: "Fantom Testnet",
+  network: "fantom-testnet",
+  nativeCurrency: {
+    name: "Fantom",
+    symbol: "FTM",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rpc.testnet.fantom.network"], // URL RPC de la fantom testnet
+    },
+    public: {
+      http: ["https://rpc.testnet.fantom.network"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Fantom Testnet Explorer",
+      url: "https://explorer.testnet.fantom.network/",
+    },
+  },
+  testnet: true,
+});
+
 // Configurar wagmi con las cadenas
 export const config = createConfig({
   chains: [mainnet, sepolia], //localhost], // Agregar la red localhost
@@ -35,9 +65,39 @@ export const config = createConfig({
   ssr: false, // is in server side rendering?
   // storage: createStorage({ storage: window.localStorage }),
   connectors: [injected(), metaMask(), safe()],
+  // connectors: [metaMask(), safe()],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
-    [localhost.id]: http(), // Agregar transport para localhost
+    [fantomTestnet.id]: http(), // Agregar transport para Fantom testnet
+    // Si quieres volver a incluir localhost:
+    [localhost.id]: http(),
   },
 });
+
+const targetNetwork = process.env.NEXT_PUBLIC_TARGET_NETWORK || "localhost";
+
+let ERC20_ADDRESS = "";
+let STAKING_ADDRESS = "";
+let FAUCET_ADDRESS = "";
+let targetChainId: bigint;
+
+switch (targetNetwork) {
+  case "fantomTestnet":
+    ERC20_ADDRESS = process.env.NEXT_PUBLIC_FANTOM_TESTNET_ERC20_ADDRESS || "";
+    STAKING_ADDRESS =
+      process.env.NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS || "";
+    FAUCET_ADDRESS =
+      process.env.NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS || "";
+    targetChainId = 4002n;
+    break;
+  case "localhost":
+  default:
+    ERC20_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS || "";
+    STAKING_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_STAKING_ADDRESS || "";
+    FAUCET_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS || "";
+    targetChainId = 41337n;
+    break;
+}
+
+export { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS, targetChainId };

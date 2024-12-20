@@ -227,23 +227,23 @@ describe("Faucet", function () {
     console.log("MyToken deploy transaction sent");
 
     // Esperar a que el contrato sea desplegado completamente
-    await myToken.waitForDeployment(); // Asegúrate de que Ethers.js v6 soporta esto
-
-    console.log("MyToken desplegado en:", myToken.address);
+    await myToken.waitForDeployment();
+    const myTokenAddress = await myToken.getAddress(); // ← Uso de getAddress()
+    console.log("MyToken desplegado en:", myTokenAddress);
 
     const FaucetFactory = await ethers.getContractFactory("Faucet");
     console.log("Obtained Faucet contract factory");
 
-    faucet = await FaucetFactory.deploy(myToken.address);
+    faucet = await FaucetFactory.deploy(myTokenAddress); // ← Aquí usamos myTokenAddress
     console.log("Faucet deploy transaction sent");
 
     // Esperar a que el contrato sea desplegado completamente
-    await faucet.waitForDeployment(); // Asegúrate de que Ethers.js v6 soporta esto
-
-    console.log("Faucet desplegado en:", faucet.address);
+    await faucet.waitForDeployment();
+    const faucetAddress = await faucet.getAddress(); // ← Uso de getAddress()
+    console.log("Faucet desplegado en:", faucetAddress);
 
     // Transferir propiedad de MyToken al Faucet
-    const transferOwnershipTx = await myToken.transferOwnership(faucet.address);
+    const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
     console.log("TransferOwnership transaction sent");
     await transferOwnershipTx.wait();
     console.log("TransferOwnership transaction confirmed");
@@ -253,7 +253,7 @@ describe("Faucet", function () {
     console.log("MINTER_ROLE hash:", MINTER_ROLE);
 
     // Otorgar MINTER_ROLE al Faucet
-    const grantRoleTx = await myToken.grantRole(MINTER_ROLE, faucet.address);
+    const grantRoleTx = await myToken.grantRole(MINTER_ROLE, faucetAddress);
     console.log("grantRole transaction sent");
     await grantRoleTx.wait();
     console.log("grantRole transaction confirmed");
@@ -266,7 +266,9 @@ describe("Faucet", function () {
 
   describe("Deployment", function () {
     it("Should set the correct token address", async function () {
-      expect(await faucet.token()).to.equal(myToken.address);
+      const tokenAddress = await faucet.token();
+      const myTokenAddress = await myToken.getAddress(); // Comparamos con el real address del contrato
+      expect(tokenAddress).to.equal(myTokenAddress);
     });
 
     it("Should set the correct claim amount", async function () {
@@ -274,7 +276,9 @@ describe("Faucet", function () {
     });
 
     it("Should transfer token ownership to faucet", async function () {
-      expect(await myToken.owner()).to.equal(faucet.address);
+      const myTokenOwner = await myToken.owner();
+      const faucetAddress = await faucet.getAddress();
+      expect(myTokenOwner).to.equal(faucetAddress);
     });
   });
 
@@ -515,8 +519,8 @@ async function main() {
   const MyToken = await hre.ethers.getContractFactory("MyToken");
   console.log("Desplegando MyToken...");
   const myToken = await MyToken.deploy();
-  await myToken.deployed(); // Ethers.js v6 soporta .deployed()
-  const myTokenAddress = myToken.address;
+  await myToken.waitForDeployment(); // En ethers v6 se usa waitForDeployment()
+  const myTokenAddress = await myToken.getAddress();
   console.log("MyToken desplegado en:", myTokenAddress);
 
   // Verificar la existencia del contrato MyToken en la blockchain
@@ -535,8 +539,8 @@ async function main() {
   const Faucet = await hre.ethers.getContractFactory("Faucet");
   console.log("Desplegando Faucet...");
   const faucet = await Faucet.deploy(myTokenAddress);
-  await faucet.deployed(); // Ethers.js v6 soporta .deployed()
-  const faucetAddress = faucet.address;
+  await faucet.waitForDeployment();
+  const faucetAddress = await faucet.getAddress();
   console.log("Faucet desplegado en:", faucetAddress);
 
   // Verificar la existencia del contrato Faucet en la blockchain
@@ -555,8 +559,8 @@ async function main() {
   const Staking = await hre.ethers.getContractFactory("Staking");
   console.log("Desplegando Staking...");
   const staking = await Staking.deploy(myTokenAddress);
-  await staking.deployed(); // Ethers.js v6 soporta .deployed()
-  const stakingAddress = staking.address;
+  await staking.waitForDeployment();
+  const stakingAddress = await staking.getAddress();
   console.log("Staking desplegado en:", stakingAddress);
 
   // Verificar la existencia del contrato Staking en la blockchain
@@ -611,7 +615,7 @@ async function main() {
   await grantSetterRoleTx.wait();
   console.log("SETTER_ROLE otorgado al deployer.");
 
-  // Copiar los archivos específicos al directorio `token_erc20_nextjs_faucet/src/abis` en `CLAIM_AND_STAKE`
+  // Copiar los archivos específicos al directorio abis
   const artifactsPath = path.join(__dirname, "../artifacts");
   const destinationPath = path.join(__dirname, "../../abis");
   const filesToCopy = ["Faucet.json", "MyToken.json", "Staking.json"];
@@ -800,7 +804,7 @@ module.exports = {
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
-    "deploy-hardhat": "npx hardhat run scripts/deploy.js",
+    "deploy-hardhat": "npx hardhat run scripts/deploy.js --network localhost",
     "copy-abis": "npx cpx 'artifacts/contracts/**/*.json' '../token_erc20_nextjs_faucet/src/app/abis'"
   },
   "keywords": [],

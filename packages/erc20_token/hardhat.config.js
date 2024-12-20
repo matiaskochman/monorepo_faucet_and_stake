@@ -1,6 +1,8 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
+const { ETH_SEPOLIA_URL, FANTOM_TESTNET_URL, PRIVATE_KEY } = process.env;
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -15,29 +17,22 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      accounts: {
-        count: 50,
-        accountsBalance: "10000000000000000000000", // 10000 ETH
-      },
-      mining: {
-        auto: true,
-        interval: 5000, // Intervalo de minado en ms
-        mempool: {
-          order: "fifo", // First in, first out
-        },
-      },
-      // hardfork: "shanghai", // Especifica el hardfork
+      accounts: { count: 50, accountsBalance: "10000000000000000000000" },
       chainId: 41337,
-      blockGasLimit: 30000000,
-      gasPrice: "auto",
-      throwOnTransactionFailures: true,
-      throwOnCallFailures: true,
-      allowUnlimitedContractSize: false, // Mantener en false para simular mainnet
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 41337,
-      timeout: 60000,
+    },
+    // sepolia: {
+    //   url: ETH_SEPOLIA_URL,
+    //   accounts: [PRIVATE_KEY],
+    //   chainId: 11155111,
+    // },
+    fantomTestnet: {
+      url: FANTOM_TESTNET_URL,
+      accounts: [PRIVATE_KEY],
+      chainId: 4002,
     },
   },
   // paths: {

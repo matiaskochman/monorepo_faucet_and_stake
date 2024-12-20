@@ -3,23 +3,12 @@
 //utils/web3Utils.ts
 
 import { ethers } from "ethers";
-// import Web3Modal from "web3modal";
-import Web3Modal, {
-  IProviderOptions,
-  IProviderDisplay,
-  Connector,
-} from "web3modal";
+import Web3Modal, { IProviderOptions, IProviderDisplay } from "web3modal";
 import tokenAbi from "../../../abis/MyToken.json";
-import faucetAbi from "../../../abis//Faucet.json";
+import faucetAbi from "../../../abis/Faucet.json";
 import stakingAbi from "../../../abis/Staking.json";
 
-// const stakingAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-// const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-// const faucetAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-
-export const ERC20_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-export const STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-export const FAUCET_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
 
 function createProviderOptions(): IProviderOptions {
   return {
@@ -45,22 +34,18 @@ async function connectWithTimeout(
   timeout: number = 10000
 ): Promise<any> {
   return new Promise(async (resolve, reject) => {
-    // Set up timeout
     const timer = setTimeout(() => {
       reject(new Error("Connection timeout"));
     }, timeout);
 
     try {
-      // Try Web3Modal connection
       const instance = await web3Modal.connect();
       clearTimeout(timer);
       resolve(instance);
     } catch (error) {
       clearTimeout(timer);
 
-      // Fallback connection methods
       try {
-        // Direct MetaMask connection
         if (window.ethereum && window.ethereum.isMetaMask) {
           await window.ethereum.request({ method: "eth_requestAccounts" });
           resolve(window.ethereum);
@@ -86,6 +71,7 @@ export const connectWallet = async (
   setBalance: (balance: number) => void,
   desiredChainId: bigint
 ) => {
+  console.log("Iniciando conexión a la wallet...");
   try {
     const web3Modal = new Web3Modal({
       cacheProvider: true,
@@ -93,54 +79,73 @@ export const connectWallet = async (
       disableInjectedProvider: false,
     });
 
-    // Connect to the wallet with enhanced connection method
-    // const instance = await connectWithTimeout(web3Modal);
-    const instance = await web3Modal.connect();
+    console.log("Mostrando modal de conexión...");
+    const instance = await web3Modal.connect(); // Aquí podría fallar
+    console.log("Modal cerrado, conexión obtenida.");
 
-    // Create ethers provider
     const provider = new ethers.BrowserProvider(instance);
-
-    // Get the signer
     const signer = await provider.getSigner();
-
-    // Get wallet address
     const address = await signer.getAddress();
-
-    // Get network information
     const network = await provider.getNetwork();
 
-    // Si se especifica un chainId deseado y es diferente al actual, intentar cambiar de red
+    console.log("Dirección obtenida:", address);
+    console.log("Red actual:", network);
+
+    // Cambiar de red si es necesario
     if (desiredChainId && network.chainId !== desiredChainId) {
+      console.log("Cambiando a la red deseada...");
+      const chainIdHex = `0x${desiredChainId.toString(16)}`;
       try {
-        const chainId = `0x${desiredChainId.toString(16)}`;
         await window.ethereum.request({
           method: "wallet_switchEthereumChain",
-          params: [{ chainId }],
+          params: [{ chainId: chainIdHex }],
         });
-        setCurrentChainId(BigInt(chainId));
-      } catch (switchError: any) {
-        console.error("Error al cambiar de red:", switchError);
-        setError("No se pudo cambiar a la red deseada.");
-        return;
+      } catch (error: any) {
+        if (error.code === 4902) {
+          console.log("La red no está agregada, intentando agregarla...");
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: chainIdHex,
+                chainName: "Fantom Testnet",
+                nativeCurrency: {
+                  name: "Fantom",
+                  symbol: "FTM",
+                  decimals: 18,
+                },
+                rpcUrls: ["https://rpc.testnet.fantom.network"],
+                blockExplorerUrls: ["https://explorer.testnet.fantom.network/"],
+              },
+            ],
+          });
+        } else {
+          console.error("Error al cambiar de red:", error);
+          setError("No se pudo cambiar a la red deseada.");
+          return;
+        }
       }
     }
-    setCurrentChainId(BigInt(desiredChainId));
+
     setProvider(provider);
     setSigner(signer);
     setAccount(address);
     setIsConnected(true);
+    setCurrentChainId(BigInt(desiredChainId));
     setError(null);
+
+    console.log("Conexión exitosa, obteniendo balance...");
     await fetchTokenBalance(signer, address, setBalance, setError);
+
+    console.log("Obteniendo monto staked...");
     const stakedAmount = await fetchStakedAmount(address, signer, setError);
     setStakedAmount(stakedAmount);
-    // await fetchStakedAmount()
   } catch (error: any) {
-    console.log(error.message);
+    console.error("Error en connectWallet:", error.message);
     setError("No se pudo conectar a la wallet.");
   }
 };
 
-// Función para obtener el balance del token
 export const fetchTokenBalance = async (
   signer: ethers.JsonRpcSigner,
   address: string,
@@ -149,7 +154,6 @@ export const fetchTokenBalance = async (
 ) => {
   try {
     console.log("fetchTokenBalance");
-
     const tokenContract = new ethers.Contract(
       ERC20_ADDRESS,
       tokenAbi.abi,
@@ -182,30 +186,26 @@ export const fetchStakedAmount = async (
     );
 
     const stakedAmount = await stakingContract.getStakedAmount(address);
-
-    // Convertir el monto a un número flotante con 6 decimales
     const staked = parseFloat(ethers.formatUnits(stakedAmount, 6));
     return staked;
   } catch (err) {
     console.error("Error al obtener el monto staked:", err);
     setError("No se pudo obtener el monto staked.");
-    return 0; // Devuelve 0 como valor seguro en caso de error
+    return 0;
   }
 };
 
-// Función para reclamar tokens
 export const claimTokens = async (
   signer: ethers.JsonRpcSigner | null,
   provider: ethers.BrowserProvider | null,
   setLoading: Function,
   setError: Function,
   setTxHash: Function
-  // fetchTokenBalance: Function,
-  // account: string | null,
-  // setBalance: Function
 ) => {
-  console.log("claimTokens");
+  console.log("Iniciando el proceso de reclamo de tokens...");
+
   if (!signer || !provider) {
+    console.error("No hay conexión activa con una wallet.");
     setError("No estás conectado a ninguna wallet.");
     return;
   }
@@ -214,49 +214,95 @@ export const claimTokens = async (
     setLoading(true);
     setError(null);
 
+    const userAddress = await signer.getAddress();
+    console.log("Dirección del usuario:", userAddress);
+
     const faucetContract = new ethers.Contract(
       FAUCET_ADDRESS,
       faucetAbi.abi,
       signer
     );
+
+    console.log("Obteniendo estado inicial del contrato...");
+    const contractBalance = await provider.getBalance(FAUCET_ADDRESS);
+    console.log(
+      "Balance del contrato del faucet (en wei):",
+      contractBalance.toString()
+    );
+
+    // if (contractBalance === 0n) {
+    //   console.error(
+    //     "El contrato del faucet no tiene balance suficiente para reclamar tokens."
+    //   );
+    //   setError("El contrato del faucet no tiene balance suficiente.");
+    //   return;
+    // }
+
+    console.log("Preparando para llamar al método claimTokens...");
     const tx = await faucetContract.claimTokens();
+    console.log("Transacción enviada. Hash:", tx.hash);
+
+    console.log("Esperando la confirmación de la transacción...");
     const receipt = await tx.wait();
 
-    console.log("Transacción enviada:", tx);
-    console.log("Receipt:", receipt);
+    console.log("Transacción confirmada. Receipt:", receipt);
+    console.log(
+      "Tokens reclamados exitosamente. Hash de la transacción:",
+      tx.hash
+    );
 
     setTxHash(tx.hash);
-    // await fetchTokenBalance(signer, account, setBalance, setError);
   } catch (err: any) {
-    console.error("Error en claimTokens:", err);
-    setError(err.message || "Ocurrió un error al reclamar los tokens.");
+    if (err.code === 4001) {
+      console.error("Transacción rechazada por el usuario.");
+      setError("Transacción rechazada por el usuario.");
+    } else {
+      console.error("Error al intentar reclamar los tokens:", err);
+      setError(err.message || "Ocurrió un error al reclamar los tokens.");
+    }
   } finally {
+    console.log("Proceso de reclamo de tokens finalizado.");
     setLoading(false);
   }
 };
 
-// Función para aprobar tokens
 export const approveTokens = async (
   amount: number,
   ERC20_ADDRESS: string,
   spenderAddress: string,
   signer: ethers.JsonRpcSigner
 ) => {
-  console.log("approveTokens");
-  const tokenContract = new ethers.Contract(
-    ERC20_ADDRESS,
-    tokenAbi.abi,
-    signer
-  );
-  const tx = await tokenContract.approve(
-    spenderAddress,
-    ethers.parseUnits(amount.toString(), 6)
-  );
-  await tx.wait();
-  console.log("Tokens aprobados:", tx);
+  console.log("Iniciando proceso de aprobación de tokens...");
+
+  try {
+    console.log(`Cantidad a aprobar: ${amount} tokens.`);
+    console.log(`Dirección del contrato ERC20: ${ERC20_ADDRESS}`);
+    console.log(`Dirección del gastador: ${spenderAddress}`);
+
+    const tokenContract = new ethers.Contract(
+      ERC20_ADDRESS,
+      tokenAbi.abi,
+      signer
+    );
+
+    console.log("Llamando a la función approve del contrato ERC20...");
+    const tx = await tokenContract.approve(
+      spenderAddress,
+      ethers.parseUnits(amount.toString(), 6)
+    );
+    console.log("Transacción enviada. Hash:", tx.hash);
+
+    console.log("Esperando la confirmación de la transacción...");
+    const receipt = await tx.wait();
+
+    console.log("Transacción confirmada. Receipt:", receipt);
+    console.log("Tokens aprobados exitosamente.");
+  } catch (err) {
+    console.error("Error durante el proceso de aprobación de tokens:", err);
+    throw new Error(err.message || "No se pudo aprobar los tokens.");
+  }
 };
 
-// Función para hacer stake de tokens
 export const stakeTokens = async (
   signer: ethers.JsonRpcSigner | null,
   provider: ethers.BrowserProvider | null,
@@ -284,12 +330,7 @@ export const stakeTokens = async (
     setLoading(true);
     setError(null);
 
-    await approveTokens(
-      amount,
-      "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-      STAKING_ADDRESS,
-      signer
-    );
+    await approveTokens(amount, ERC20_ADDRESS, STAKING_ADDRESS, signer);
     const tx = await stakingContract.stake(amountInTokens);
     const receipt = await tx.wait();
 
@@ -306,8 +347,6 @@ export const stakeTokens = async (
     setLoading(false);
   }
 };
-
-// Función para hacer unstake de tokens
 
 export const unstakeTokens = async (
   signer: ethers.JsonRpcSigner | null,
@@ -336,11 +375,9 @@ export const unstakeTokens = async (
     setLoading(true);
     setError(null);
 
-    // Obtener la dirección del usuario
     const userAddress = await signer.getAddress();
     console.log("Dirección del usuario:", userAddress);
 
-    // Consultar el stakedAmount desde el contrato
     const stakedAmountBigNumber: bigint = await stakingContract.getStakedAmount(
       userAddress
     );
@@ -356,7 +393,6 @@ export const unstakeTokens = async (
 
     console.log(`Intentando hacer unstake de ${amount} tokens.`);
 
-    // Verificar el balance del contrato de staking
     const stakingContractBalance = await checkStakingContractBalance(
       signer,
       setError
@@ -366,7 +402,6 @@ export const unstakeTokens = async (
       stakingContractBalance
     );
 
-    // Validar que el usuario tiene suficiente stakedAmount para hacer unstake
     if (amount > stakedAmount) {
       setError(
         "No tienes suficientes tokens apostados para realizar esta operación."
@@ -378,7 +413,6 @@ export const unstakeTokens = async (
     const valueToUnstake = ethers.parseUnits(amount.toString(), 6);
     console.log("Cantidad a desapostar (en wei):", valueToUnstake.toString());
 
-    // Realizar la transacción de unstake
     const tx = await stakingContract.unstake(valueToUnstake);
     const receipt = await tx.wait();
 
@@ -388,7 +422,6 @@ export const unstakeTokens = async (
     setTxHash(tx.hash);
     setStakedAmount((prev: number) => prev - amount);
 
-    // Si el usuario ha desapostado todo, restablecer los estados relacionados
     if (amount >= stakedAmount) {
       setStakingStart(null);
       setStakingRewards(0);
@@ -400,6 +433,7 @@ export const unstakeTokens = async (
     setLoading(false);
   }
 };
+
 export const checkStakingContractBalance = async (
   signer: ethers.JsonRpcSigner,
   setError: Function
@@ -432,7 +466,6 @@ export const checkStakingContractBalance = async (
   }
 };
 
-// Función para desconectar la wallet
 export const logout = (
   setAccount: Function,
   setProvider: Function,

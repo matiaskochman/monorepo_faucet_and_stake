@@ -14,17 +14,19 @@ import { formatDistanceToNow } from "date-fns";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import {
-  STAKING_ADDRESS,
   ERC20_ADDRESS,
+  STAKING_ADDRESS,
   FAUCET_ADDRESS,
-} from "@/utils/web3Utils";
-// import { fetchStakedAmount } from "@/utils/web3Utils";
+  targetChainId,
+} from "../config";
+
+console.log("ERC20_ADDRESS:", ERC20_ADDRESS);
+console.log("STAKING_ADDRESS:", STAKING_ADDRESS);
+console.log("FAUCET_ADDRESS:", FAUCET_ADDRESS);
 
 export default function Web3TokenDashboard() {
   const [balance, setBalance] = useState<number>(0);
-  // const [stakedAmount, setStakedAmount] = useState(0);
   const [stakedAmount, setStakedAmount] = useState<number>(0);
-
   const [stakingStart, setStakingStart] = useState<Date | null>(null);
   const [stakingRewards, setStakingRewards] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -51,56 +53,69 @@ export default function Web3TokenDashboard() {
           setCurrentChainId,
           setStakedAmount,
           setBalance,
-          41337n
+          BigInt(targetChainId)
         );
+      } else {
+        setIsConnected(false);
+        setAccount(null);
       }
     };
 
     init();
+  }, []);
 
+  useEffect(() => {
     if (window.ethereum) {
-      window.ethereum.on("accountsChanged", async (accounts: string[]) => {
+      const handleAccountsChanged = async (accounts: string[]) => {
         if (accounts.length > 0) {
           setAccount(accounts[0]);
-          await connectWallet(
-            setProvider,
-            setSigner,
-            setAccount,
-            setIsConnected,
-            setError,
-            setCurrentChainId,
-            setStakedAmount,
-            setBalance,
-            41337n // Por ejemplo, si quieres que cambie a esta red
-          );
+          console.log("Dirección del usuario:", accounts[0]);
+
+          if (signer && provider) {
+            await fetchTokenBalance(signer, accounts[0], setBalance, setError);
+            const staked = await fetchStakedAmount(
+              accounts[0],
+              signer,
+              setError
+            );
+            setStakedAmount(staked);
+          } else {
+            await connectWallet(
+              setProvider,
+              setSigner,
+              setAccount,
+              setIsConnected,
+              setError,
+              setCurrentChainId,
+              setStakedAmount,
+              setBalance,
+              BigInt(targetChainId)
+            );
+          }
         } else {
           handleLogout();
         }
-      });
+      };
 
-      window.ethereum.on("chainChanged", (_chainId: string) => {
-        window.location.reload();
-      });
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+      return () => {
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged
+        );
+      };
     }
-
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener("accountsChanged", () => {});
-        window.ethereum.removeListener("chainChanged", () => {});
-      }
-    };
-  }, []);
+  }, [signer, provider]);
 
   const handleClaimtokens = async () => {
     setLoading(true);
     await claimTokens(signer, provider, setLoading, setError, setTxHash);
     if (provider && signer && account) {
-      // Ahora puedes llamar a fetchTokenBalance u otras funciones que necesites
       await fetchTokenBalance(signer, account, setBalance, setError);
     }
-
     setLoading(false);
   };
+
   const handleConnectWallet = async () => {
     setLoading(true);
     await connectWallet(
@@ -112,15 +127,15 @@ export default function Web3TokenDashboard() {
       setCurrentChainId,
       setStakedAmount,
       setBalance,
-      41337n // Por ejemplo, si quieres que cambie a esta red
+      BigInt(targetChainId)
     );
     setLoading(false);
 
     if (provider && signer && account) {
-      // Ahora puedes llamar a fetchTokenBalance u otras funciones que necesites
       await fetchTokenBalance(signer, account, setBalance, setError);
     }
   };
+
   const handleUnstake = async () => {
     await unstakeTokens(
       signer,
@@ -134,10 +149,10 @@ export default function Web3TokenDashboard() {
       setStakingRewards
     );
     if (provider && signer && account) {
-      // Ahora puedes llamar a fetchTokenBalance u otras funciones que necesites
       await fetchTokenBalance(signer, account, setBalance, setError);
     }
   };
+
   const handleStake = async () => {
     await stakeTokens(
       signer,
@@ -150,10 +165,10 @@ export default function Web3TokenDashboard() {
       setStakingStart
     );
     if (provider && signer && account) {
-      // Ahora puedes llamar a fetchTokenBalance u otras funciones que necesites
       await fetchTokenBalance(signer, account, setBalance, setError);
     }
   };
+
   const handleLogout = async () => {
     logout(
       setAccount,
@@ -169,6 +184,7 @@ export default function Web3TokenDashboard() {
       setTxHash
     );
   };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <Card className="max-w-[39rem]">
@@ -186,7 +202,6 @@ export default function Web3TokenDashboard() {
             </Button>
           ) : (
             <>
-              {/* Direcciones de los contratos */}
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between">
                   <span>Contrato ERC20:</span>
@@ -238,7 +253,7 @@ export default function Web3TokenDashboard() {
               <div className="flex flex-col space-y-2">
                 <Button
                   onClick={handleClaimtokens}
-                  disabled={loading || currentChainId !== 41337n}
+                  disabled={loading || currentChainId !== BigInt(targetChainId)}
                 >
                   {loading ? "Reclamando..." : "Claim Tokens"}
                 </Button>
@@ -251,7 +266,7 @@ export default function Web3TokenDashboard() {
                 />
                 <Button
                   onClick={handleStake}
-                  disabled={loading || currentChainId !== 41337n}
+                  disabled={loading || currentChainId !== BigInt(targetChainId)}
                 >
                   {loading
                     ? "Haciendo Stake..."
@@ -266,7 +281,7 @@ export default function Web3TokenDashboard() {
                 />
                 <Button
                   onClick={handleUnstake}
-                  disabled={loading || currentChainId !== 41337n}
+                  disabled={loading || currentChainId !== BigInt(targetChainId)}
                 >
                   {loading
                     ? "Haciendo Unstake..."
@@ -282,7 +297,7 @@ export default function Web3TokenDashboard() {
               </div>
             </>
           )}
-          {txHash && (
+          {/* {txHash && (
             <div className="p-3 bg-green-100 rounded">
               <p className="text-green-800">
                 Transacción enviada:{" "}
@@ -296,13 +311,13 @@ export default function Web3TokenDashboard() {
                 </a>
               </p>
             </div>
-          )}
+          )} */}
           {error && (
             <p className="text-red-500" role="alert">
               {error}
             </p>
           )}
-          {currentChainId !== 41337n && (
+          {currentChainId !== BigInt(targetChainId) && (
             <p className="text-orange-500" role="alert">
               Cambia a la red de Hardhat para reclamar los tokens.
             </p>
@@ -311,4 +326,21 @@ export default function Web3TokenDashboard() {
       </Card>
     </div>
   );
+}
+
+async function fetchStakedAmount(
+  address: string,
+  signer: ethers.JsonRpcSigner,
+  setError: (msg: string) => void
+): Promise<number> {
+  try {
+    const { fetchStakedAmount: originalFetch } = await import(
+      "@/utils/web3Utils"
+    );
+    return await originalFetch(address, signer, setError);
+  } catch (err) {
+    console.error("Error al obtener el monto staked:", err);
+    setError("No se pudo obtener el monto staked.");
+    return 0;
+  }
 }

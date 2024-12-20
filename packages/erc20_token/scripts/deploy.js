@@ -5,7 +5,12 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  // const [deployer] = await hre.ethers.getSigners();
+  // Obtener la dirección específica
+  const specificAddress = "0x432Bcf17BC6F3c298a624fEcfdb608c3cacd121d";
+  // Obtener el signer desde esa dirección (asumiendo que está en las accounts de la red)
+  const deployer = await hre.ethers.getSigner(specificAddress);
+
   console.log("Desplegando contratos con la cuenta:", deployer.address);
 
   // Desplegar MyToken
