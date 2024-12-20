@@ -1,7 +1,13 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
-const { ETH_SEPOLIA_URL, FANTOM_TESTNET_URL, PRIVATE_KEY } = process.env;
+const {
+  ETH_SEPOLIA_URL,
+  FANTOM_TESTNET_URL,
+  PRIVATE_KEY,
+  ACC6_PRIVATE_KEY,
+  ETHERSCAN_TEST_API_KEY,
+} = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -24,11 +30,11 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       chainId: 41337,
     },
-    // sepolia: {
-    //   url: ETH_SEPOLIA_URL,
-    //   accounts: [PRIVATE_KEY],
-    //   chainId: 11155111,
-    // },
+    sepolia: {
+      url: ETH_SEPOLIA_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 11155111,
+    },
     fantomTestnet: {
       url: FANTOM_TESTNET_URL,
       accounts: [PRIVATE_KEY],
@@ -61,14 +67,23 @@ module.exports = {
   // mocha: {
   //   timeout: 200000, // 200 segundos
   // },
-  // etherscan: {
-  //   apiKey: process.env.ETHERSCAN_API_KEY,
-  // },
-  // verify: {
-  //   etherscan: {
-  //     apiKey: process.env.ETHERSCAN_API_KEY,
-  //   },
-  // },
+  etherscan: {
+    apiKey: {
+      opera: process.env.FTM_TEST_API_KEY, // Mainnet
+      ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
+      sepolia: ETHERSCAN_TEST_API_KEY,
+    },
+  },
+  verify: {
+    etherscan: {
+      apiKey: {
+        opera: process.env.FTM_TEST_API_KEY, // Mainnet
+        ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
+        sepolia: ETHERSCAN_TEST_API_KEY,
+      },
+      ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
+    },
+  },
 };
 
 // // Manejo de tareas condicionales

@@ -59,9 +59,10 @@ const fantomTestnet = defineChain({
 
 // Configurar wagmi con las cadenas
 export const config = createConfig({
-  chains: [mainnet, sepolia], //localhost], // Agregar la red localhost
+  chains: [mainnet, sepolia, fantomTestnet], //localhost], // Agregar la red localhost
 
-  multiInjectedProviderDiscovery: false,
+  multiInjectedProviderDiscovery: true,
+  // multiInjectedProviderDiscovery: false,
   ssr: false, // is in server side rendering?
   // storage: createStorage({ storage: window.localStorage }),
   connectors: [injected(), metaMask(), safe()],
@@ -91,6 +92,15 @@ switch (targetNetwork) {
       process.env.NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS || "";
     targetChainId = 4002n;
     break;
+  case "sepolia":
+    ERC20_ADDRESS = process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS || "";
+    STAKING_ADDRESS =
+      process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS || "";
+    FAUCET_ADDRESS =
+      process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS || "";
+    targetChainId = 4002n;
+    break;
+
   case "localhost":
   default:
     ERC20_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS || "";
@@ -101,3 +111,7 @@ switch (targetNetwork) {
 }
 
 export { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS, targetChainId };
+
+export function getConfig() {
+  return config;
+}
