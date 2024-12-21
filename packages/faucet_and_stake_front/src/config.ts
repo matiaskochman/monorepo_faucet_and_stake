@@ -1,5 +1,10 @@
 import { http, createConfig, createStorage, createClient } from "wagmi";
-import { mainnet, sepolia } from "wagmi/chains";
+import {
+  fantomSonicTestnet,
+  mainnet,
+  polygonAmoy,
+  sepolia,
+} from "wagmi/chains";
 import { injected, metaMask, safe } from "wagmi/connectors";
 import { defineChain } from "viem";
 
@@ -30,36 +35,36 @@ const localhost = defineChain({
   testnet: true, // Marcar como testnet
 });
 
-// Definir la Fantom testnet (chainId: 4002)
-const fantomTestnet = defineChain({
-  id: 4002,
-  name: "Fantom Testnet",
-  network: "fantom-testnet",
-  nativeCurrency: {
-    name: "Fantom",
-    symbol: "FTM",
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.testnet.fantom.network"], // URL RPC de la fantom testnet
-    },
-    public: {
-      http: ["https://rpc.testnet.fantom.network"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Fantom Testnet Explorer",
-      url: "https://explorer.testnet.fantom.network/",
-    },
-  },
-  testnet: true,
-});
+// // Definir la Fantom testnet (chainId: 4002)
+// const fantomTestnet1 = defineChain({
+//   id: 4002,
+//   name: "Fantom Testnet",
+//   network: "fantom-testnet",
+//   nativeCurrency: {
+//     name: "Fantom",
+//     symbol: "FTM",
+//     decimals: 18,
+//   },
+//   rpcUrls: {
+//     default: {
+//       http: ["https://rpc.testnet.fantom.network"], // URL RPC de la fantom testnet
+//     },
+//     public: {
+//       http: ["https://rpc.testnet.fantom.network"],
+//     },
+//   },
+//   blockExplorers: {
+//     default: {
+//       name: "Fantom Testnet Explorer",
+//       url: "https://explorer.testnet.fantom.network/",
+//     },
+//   },
+//   testnet: true,
+// });
 
 // Configurar wagmi con las cadenas
 export const config = createConfig({
-  chains: [mainnet, sepolia, fantomTestnet], //localhost], // Agregar la red localhost
+  chains: [mainnet, sepolia, fantomSonicTestnet, polygonAmoy], //localhost], // Agregar la red localhost
 
   multiInjectedProviderDiscovery: true,
   // multiInjectedProviderDiscovery: false,
@@ -70,7 +75,8 @@ export const config = createConfig({
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
-    [fantomTestnet.id]: http(), // Agregar transport para Fantom testnet
+    [fantomSonicTestnet.id]: http(), // Agregar transport para Fantom testnet
+    [polygonAmoy.id]: http(),
     // Si quieres volver a incluir localhost:
     [localhost.id]: http(),
   },
@@ -100,7 +106,14 @@ switch (targetNetwork) {
       process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS || "";
     targetChainId = 4002n;
     break;
-
+  case "polygonTestnet":
+    ERC20_ADDRESS = process.env.NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS || "";
+    STAKING_ADDRESS =
+      process.env.NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS || "";
+    FAUCET_ADDRESS =
+      process.env.NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS || "";
+    targetChainId = 80002n;
+    break;
   case "localhost":
   default:
     ERC20_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS || "";

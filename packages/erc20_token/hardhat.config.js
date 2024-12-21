@@ -7,6 +7,7 @@ const {
   PRIVATE_KEY,
   ACC6_PRIVATE_KEY,
   ETHERSCAN_TEST_API_KEY,
+  POLYGON_AMOY_URL,
 } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -39,6 +40,11 @@ module.exports = {
       url: FANTOM_TESTNET_URL,
       accounts: [PRIVATE_KEY],
       chainId: 4002,
+    },
+    amoy: {
+      url: POLYGON_AMOY_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 80002,
     },
   },
   // paths: {

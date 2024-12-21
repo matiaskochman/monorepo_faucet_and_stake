@@ -9,11 +9,13 @@ import {
   // useReadContract,
   useWriteContract,
 } from "wagmi";
+import { type GetAccountReturnType } from "@wagmi/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
 import { TokenBalance } from "../components/ui/TokenBalance";
 import ClaimTokens from "@/components/ui/ClaimTokens";
+
 function App() {
   const [erc20TokenBalance, setErc20TokenBalance] = useState<number>(0);
   const [stakedAmount, setStakedAmount] = useState<number>(0);
@@ -21,29 +23,16 @@ function App() {
   const [stakingRewards, setStakingRewards] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showError, setShowError] = useState<string | null>(null);
-
-  // const TokenBalance = dynamic(
-  //   () =>
-  //     import("../components/ui/TokenBalance").then((mod) => mod.TokenBalance),
-  //   {
-  //     ssr: false,
-  //     loading: () => <div>Cargando balance...</div>, // Asegúrate de usar un fallback consistente
-  //   }
-  // );
+  const [acc, setAcc] = useState<GetAccountReturnType>({});
 
   const account = useAccount();
 
+  useEffect(() => {
+    setAcc(account);
+  }, [account]);
+
   const { connectors, connect, status, error } = useConnect();
   const { disconnect } = useDisconnect();
-  const { data: hash, writeContract } = useWriteContract();
-
-  // useEffect(() => {
-  //   const init = async () => {
-  //     await FetchTokenBalance(account, setErc20TokenBalance, setShowError);
-  //   };
-
-  //   init();
-  // }, []);
 
   // await fetchTokenBalance(signer, account, setBalance, setError);
   return (
@@ -72,17 +61,15 @@ function App() {
             <br />
             <div className="flex justify-between py-2">
               <span>status:</span>
-              <span className="font-mono">{account.status}</span>
+              <span className="font-mono">{acc.status}</span>
             </div>
             <div className="flex justify-between py-2">
               <span>addresses:</span>
-              <span className="font-mono">
-                {JSON.stringify(account.addresses)}
-              </span>
+              <span className="font-mono">{JSON.stringify(acc.addresses)}</span>
             </div>
             <div className="flex justify-between py-2">
               <span>chainId:</span>
-              <span className="font-mono">{account.chainId}</span>
+              <span className="font-mono">{acc.chainId}</span>
             </div>
 
             <div className="flex justify-between py-2">
@@ -116,11 +103,7 @@ function App() {
             )}
           </div>
           <div className="flex justify-between py-2">
-            {account?.status === "connected" && (
-              <div>
-                <ClaimTokens />
-              </div>
-            )}
+            {account?.status === "connected" && <div>{<ClaimTokens />}</div>}
           </div>
         </CardContent>
       </Card>
