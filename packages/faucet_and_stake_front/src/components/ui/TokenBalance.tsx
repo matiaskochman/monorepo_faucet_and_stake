@@ -5,11 +5,19 @@ import { CircularProgress, Typography } from "@mui/material";
 import { useReadContract, useAccount, useChainId } from "wagmi";
 import { ethers } from "ethers";
 import tokenAbi from "../../../../abis/MyToken.json";
-import { ERC20_ADDRESS } from "@/config";
+// import { ERC20_ADDRESS } from "@/config";
 
-const TokenBalance = ({ address }: { address: `0x${string}` | undefined }) => {
+interface TokenBalanceProps {
+  address?: `0x${string}`;
+  contractAddress: `0x${string}`;
+}
+
+const TokenBalance: React.FC<TokenBalanceProps> = ({
+  address,
+  contractAddress,
+}) => {
   const { status } = useAccount(); // Obtiene el estado de la cuenta
-  const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
+  // const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +42,7 @@ const TokenBalance = ({ address }: { address: `0x${string}` | undefined }) => {
     } else if (data) {
       const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
       setBalance(formattedBalance);
+      setError(null);
     }
   }, [data, contractError]);
 

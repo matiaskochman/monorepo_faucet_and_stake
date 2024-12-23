@@ -78,6 +78,7 @@ module.exports = {
       opera: process.env.FTM_TEST_API_KEY, // Mainnet
       ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
       sepolia: ETHERSCAN_TEST_API_KEY,
+      amoy: ETHERSCAN_TEST_API_KEY,
     },
   },
   verify: {
@@ -86,6 +87,7 @@ module.exports = {
         opera: process.env.FTM_TEST_API_KEY, // Mainnet
         ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
         sepolia: ETHERSCAN_TEST_API_KEY,
+        amoy: ETHERSCAN_TEST_API_KEY,
       },
       ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
     },
