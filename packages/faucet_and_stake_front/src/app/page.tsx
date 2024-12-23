@@ -1,114 +1,181 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  // useReadContract,
-  useWriteContract,
-} from "wagmi";
-import { type GetAccountReturnType } from "@wagmi/core";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  TextField,
+  Divider,
+  CircularProgress,
+} from "@mui/material";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
-import { TokenBalance } from "../components/ui/TokenBalance";
+import TokenBalance from "@/components/ui/TokenBalance";
 import ClaimTokens from "@/components/ui/ClaimTokens";
 
-function App() {
-  const [erc20TokenBalance, setErc20TokenBalance] = useState<number>(0);
-  const [stakedAmount, setStakedAmount] = useState<number>(0);
-  const [stakingStart, setStakingStart] = useState<Date | null>(null);
-  const [stakingRewards, setStakingRewards] = useState(0);
+export default function Web3TokenDashboard() {
+  const [stakeAmount, setStakeAmount] = useState<number>(0);
+  const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [showError, setShowError] = useState<string | null>(null);
-  const [acc, setAcc] = useState<GetAccountReturnType>({});
 
+  const { connectors, connect } = useConnect();
+  const { disconnect } = useDisconnect();
   const account = useAccount();
 
-  useEffect(() => {
-    setAcc(account);
-  }, [account]);
+  // Manejar la conexión y desconexión
+  const handleConnect = (connectorId: string) => {
+    const connector = connectors.find((c) => c.id === connectorId);
+    if (connector) {
+      connect({ connector });
+    }
+  };
 
-  const { connectors, connect, status, error } = useConnect();
-  const { disconnect } = useDisconnect();
+  const handleDisconnect = () => {
+    disconnect();
+  };
 
-  // await fetchTokenBalance(signer, account, setBalance, setError);
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="max-w-[39rem]">
-        <CardHeader>
-          <CardTitle>Web3 Token Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between">
-              <span>Contrato ERC20:</span>
-              <span className="font-mono">{ERC20_ADDRESS}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Contrato Staking:</span>
-              <span className="font-mono">{STAKING_ADDRESS}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Contrato Faucet:</span>
-              <span className="font-mono">{FAUCET_ADDRESS}</span>
-            </div>
-          </div>
-          <div>
-            <h2>Account</h2>
-            <br />
-            <div className="flex justify-between py-2">
-              <span>status:</span>
-              <span className="font-mono">{acc.status}</span>
-            </div>
-            <div className="flex justify-between py-2">
-              <span>addresses:</span>
-              <span className="font-mono">{JSON.stringify(acc.addresses)}</span>
-            </div>
-            <div className="flex justify-between py-2">
-              <span>chainId:</span>
-              <span className="font-mono">{acc.chainId}</span>
-            </div>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        p: 2,
+      }}
+    >
+      <Card sx={{ maxWidth: 600, width: "100%" }}>
+        <CardHeader
+          title="Web3 Token Dashboard"
+          sx={{ textAlign: "center", bgcolor: "primary.main", color: "#fff" }}
+        />
+        <CardContent>
+          {/* Información de los contratos */}
+          <Box>
+            <Typography variant="h6">Información de Contratos</Typography>
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body1">
+                <strong>Contrato ERC20:</strong> {ERC20_ADDRESS}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Contrato Staking:</strong> {STAKING_ADDRESS}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Contrato Faucet:</strong> {FAUCET_ADDRESS}
+              </Typography>
+            </Box>
+          </Box>
 
-            <div className="flex justify-between py-2">
-              {account.status === "connected" && (
-                <Button type="button" onClick={() => disconnect()}>
+          {/* Estado de la cuenta */}
+          <Box>
+            <Typography variant="h6">Estado de la Cuenta</Typography>
+            <Divider sx={{ my: 2 }} />
+            {account.status === "connected" ? (
+              <>
+                <Typography variant="body1">
+                  <strong>Status:</strong> Conectado
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Dirección:</strong> {account.address || "N/A"}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Chain ID:</strong> {account.chainId || "N/A"}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDisconnect}
+                  sx={{ mt: 2 }}
+                >
                   Disconnect
                 </Button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h2>Connect</h2>
-            {connectors.map((connector) => (
-              <Button
-                key={connector.uid}
-                onClick={() => connect({ connector })}
-                type="button"
-              >
-                {connector.name}
-              </Button>
-            ))}
-            <div>{status}</div>
-            <div>{error?.message}</div>
-          </div>
-          <div className="flex justify-between py-2">
-            {account?.status === "connected" && (
-              <div>
-                <TokenBalance address={account?.addresses[0]} />
-              </div>
+              </>
+            ) : (
+              <>
+                <Typography variant="body1">
+                  Conecta tu wallet para continuar.
+                </Typography>
+                <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+                  {connectors.map((connector) => (
+                    <Button
+                      key={connector.id}
+                      variant="contained"
+                      onClick={() => handleConnect(connector.id)}
+                    >
+                      {connector.name}
+                    </Button>
+                  ))}
+                </Box>
+              </>
             )}
-          </div>
-          <div className="flex justify-between py-2">
-            {account?.status === "connected" && <div>{<ClaimTokens />}</div>}
-          </div>
+          </Box>
+
+          {/* Componente ClaimTokens */}
+          <Box sx={{ mt: 2 }}>
+            <ClaimTokens />
+          </Box>
+          {/* Componente TokenBalance */}
+          <Box sx={{ mt: 2 }}>
+            <TokenBalance address={account.address} />
+          </Box>
+
+          {/* Acciones de staking */}
+          {account.status === "connected" && (
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h6">Acciones de Staking</Typography>
+              <Divider sx={{ my: 2 }} />
+              <TextField
+                label="Cantidad para Stake"
+                type="number"
+                value={stakeAmount}
+                onChange={(e) => setStakeAmount(Number(e.target.value))}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  setLoading(true);
+                  setTimeout(() => setLoading(false), 2000); // Simula una operación
+                }}
+                disabled={loading}
+                fullWidth
+              >
+                {loading ? <CircularProgress size={24} /> : `Stake Tokens`}
+              </Button>
+
+              <TextField
+                label="Cantidad para Unstake"
+                type="number"
+                value={unstakeAmount}
+                onChange={(e) => setUnstakeAmount(Number(e.target.value))}
+                fullWidth
+                sx={{ mt: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => {
+                  setLoading(true);
+                  setTimeout(() => setLoading(false), 2000); // Simula una operación
+                }}
+                disabled={loading}
+                fullWidth
+                sx={{ mt: 2 }}
+              >
+                {loading ? <CircularProgress size={24} /> : `Unstake Tokens`}
+              </Button>
+            </Box>
+          )}
         </CardContent>
       </Card>
-    </div>
+    </Box>
   );
 }
-
-export default App;

@@ -1,4 +1,4 @@
-import { http, createConfig, createStorage, createClient } from "wagmi";
+import { http, createConfig, createStorage } from "wagmi";
 import {
   fantomSonicTestnet,
   mainnet,
@@ -35,40 +35,13 @@ const localhost = defineChain({
   testnet: true, // Marcar como testnet
 });
 
-// // Definir la Fantom testnet (chainId: 4002)
-// const fantomTestnet1 = defineChain({
-//   id: 4002,
-//   name: "Fantom Testnet",
-//   network: "fantom-testnet",
-//   nativeCurrency: {
-//     name: "Fantom",
-//     symbol: "FTM",
-//     decimals: 18,
-//   },
-//   rpcUrls: {
-//     default: {
-//       http: ["https://rpc.testnet.fantom.network"], // URL RPC de la fantom testnet
-//     },
-//     public: {
-//       http: ["https://rpc.testnet.fantom.network"],
-//     },
-//   },
-//   blockExplorers: {
-//     default: {
-//       name: "Fantom Testnet Explorer",
-//       url: "https://explorer.testnet.fantom.network/",
-//     },
-//   },
-//   testnet: true,
-// });
-
 // Configurar wagmi con las cadenas
 export const config = createConfig({
   chains: [mainnet, sepolia, fantomSonicTestnet, polygonAmoy], //localhost], // Agregar la red localhost
 
   multiInjectedProviderDiscovery: true,
   // multiInjectedProviderDiscovery: false,
-  ssr: false, // is in server side rendering?
+  ssr: true, // is in server side rendering?
   // storage: createStorage({ storage: window.localStorage }),
   connectors: [injected(), metaMask(), safe()],
   // connectors: [metaMask(), safe()],
@@ -104,7 +77,7 @@ switch (targetNetwork) {
       process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS || "";
     FAUCET_ADDRESS =
       process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS || "";
-    targetChainId = 4002n;
+    targetChainId = 11155111n;
     break;
   case "polygonTestnet":
     ERC20_ADDRESS = process.env.NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS || "";

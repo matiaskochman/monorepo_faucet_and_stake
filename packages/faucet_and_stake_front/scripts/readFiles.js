@@ -14,9 +14,9 @@ const outputFile = join(process.cwd(), "output.txt");
 const excludeDirs = ["fonts", "abis"];
 const excludeFiles = ["favicon.ico", "globals.css", "layout.tsx"];
 const rootFiles = [
-  ".env",
+  // ".env",
   // "tsconfig.json",
-  "package.json",
+  // "package.json",
   // "next.config.mjs",
   // "tailwind.config.ts",
 ];

@@ -1,70 +1,3 @@
-// Path: .env
-
-# Red objetivo
-NEXT_PUBLIC_TARGET_NETWORK="fantomTestnet"
-
-# Direcciones para fantomTestnet
-NEXT_PUBLIC_FANTOM_TESTNET_ERC20_ADDRESS="0x73C4EFcCb0340bdFd2C0d8B401f4A7CfBc07fd07"
-NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS="0xD233A182c5A89280457a68B23C761AaE9fe3D765"
-NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS="0x539383726418f2F903dFa775f9D3D25AeE7E602A"
-
-# Direcciones para localhost
-NEXT_PUBLIC_LOCAL_ERC20_ADDRESS="0x5FbDB2315678afecb367f032d93F642f64180aa3"
-NEXT_PUBLIC_LOCAL_STAKING_ADDRESS="0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
-NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS="0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-
-# Direcciones para sepolia
-NEXT_PUBLIC_SEPOLIA_ERC20_ADDRESS="0x5FbDB2315678afecb367f032d93F642f64180aa3"
-NEXT_PUBLIC_SEPOLIA_STAKING_ADDRESS="0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
-NEXT_PUBLIC_SEPOLIA_FAUCET_ADDRESS="0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-
-
-// Path: package.json
-
-{
-  "name": "token_erc20_nextjs_faucet",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@radix-ui/react-slot": "^1.1.0",
-    "@shadcn/ui": "^0.0.4",
-    "@tanstack/react-query": "^5.59.0",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "dotenv": "^16.4.7",
-    "ethers": "^6.13.3",
-    "install": "^0.13.0",
-    "lucide-react": "^0.454.0",
-    "next": "14.2.14",
-    "npm": "^10.8.3",
-    "react": "^18",
-    "react-dom": "^18",
-    "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7",
-    "viem": "^2.21.17",
-    "wagmi": "^2.12.16",
-    "web3modal": "^1.9.12"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.14",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
-  }
-}
-
-
 // Path: src/app/components/Profile.tsx
 
 "use client";
@@ -82,6 +15,7 @@ export function Profile() {
 
 // Path: src/app/components/ReadContract.tsx
 
+"use client";
 import { useReadContract } from "wagmi";
 import { config } from "../../config";
 export function ReadContract() {
@@ -119,6 +53,7 @@ export function WagmiClientProvider({
 
 // Path: src/app/components/WalletOptions.tsx
 
+"use client";
 import * as React from "react";
 import { useConnect } from "wagmi";
 
@@ -857,6 +792,191 @@ async function fetchStakedAmount(
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  TextField,
+  Divider,
+  CircularProgress,
+} from "@mui/material";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
+import TokenBalance from "@/components/ui/TokenBalance";
+import ClaimTokens from "@/components/ui/ClaimTokens";
+
+export default function Web3TokenDashboard() {
+  const [stakeAmount, setStakeAmount] = useState<number>(0);
+  const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+
+  const { connectors, connect } = useConnect();
+  const { disconnect } = useDisconnect();
+  const account = useAccount();
+
+  // Manejar la conexión y desconexión
+  const handleConnect = (connectorId: string) => {
+    const connector = connectors.find((c) => c.id === connectorId);
+    if (connector) {
+      connect({ connector });
+    }
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+  };
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        p: 2,
+      }}
+    >
+      <Card sx={{ maxWidth: 600, width: "100%" }}>
+        <CardHeader
+          title="Web3 Token Dashboard"
+          sx={{ textAlign: "center", bgcolor: "primary.main", color: "#fff" }}
+        />
+        <CardContent>
+          {/* Información de los contratos */}
+          <Box>
+            <Typography variant="h6">Información de Contratos</Typography>
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body1">
+                <strong>Contrato ERC20:</strong> {ERC20_ADDRESS}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Contrato Staking:</strong> {STAKING_ADDRESS}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Contrato Faucet:</strong> {FAUCET_ADDRESS}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Estado de la cuenta */}
+          <Box>
+            <Typography variant="h6">Estado de la Cuenta</Typography>
+            <Divider sx={{ my: 2 }} />
+            {account.status === "connected" ? (
+              <>
+                <Typography variant="body1">
+                  <strong>Status:</strong> Conectado
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Dirección:</strong> {account.address || "N/A"}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Chain ID:</strong> {account.chainId || "N/A"}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDisconnect}
+                  sx={{ mt: 2 }}
+                >
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <>
+                <Typography variant="body1">
+                  Conecta tu wallet para continuar.
+                </Typography>
+                <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+                  {connectors.map((connector) => (
+                    <Button
+                      key={connector.id}
+                      variant="contained"
+                      onClick={() => handleConnect(connector.id)}
+                    >
+                      {connector.name}
+                    </Button>
+                  ))}
+                </Box>
+              </>
+            )}
+          </Box>
+
+          {/* Componente ClaimTokens */}
+          <Box sx={{ mt: 2 }}>
+            <ClaimTokens />
+          </Box>
+          {/* Componente TokenBalance */}
+          <Box sx={{ mt: 2 }}>
+            <TokenBalance address={account.address} />
+          </Box>
+
+          {/* Acciones de staking */}
+          {account.status === "connected" && (
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h6">Acciones de Staking</Typography>
+              <Divider sx={{ my: 2 }} />
+              <TextField
+                label="Cantidad para Stake"
+                type="number"
+                value={stakeAmount}
+                onChange={(e) => setStakeAmount(Number(e.target.value))}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  setLoading(true);
+                  setTimeout(() => setLoading(false), 2000); // Simula una operación
+                }}
+                disabled={loading}
+                fullWidth
+              >
+                {loading ? <CircularProgress size={24} /> : `Stake Tokens`}
+              </Button>
+
+              <TextField
+                label="Cantidad para Unstake"
+                type="number"
+                value={unstakeAmount}
+                onChange={(e) => setUnstakeAmount(Number(e.target.value))}
+                fullWidth
+                sx={{ mt: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => {
+                  setLoading(true);
+                  setTimeout(() => setLoading(false), 2000); // Simula una operación
+                }}
+                disabled={loading}
+                fullWidth
+                sx={{ mt: 2 }}
+              >
+                {loading ? <CircularProgress size={24} /> : `Unstake Tokens`}
+              </Button>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
+
+
+// Path: src/app/page.tsx.old
+
+"use client";
+
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import {
   useAccount,
@@ -865,9 +985,12 @@ import {
   // useReadContract,
   useWriteContract,
 } from "wagmi";
+import { type GetAccountReturnType } from "@wagmi/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
+import { TokenBalance } from "../components/ui/TokenBalance";
+import ClaimTokens from "@/components/ui/ClaimTokens";
 
 function App() {
   const [erc20TokenBalance, setErc20TokenBalance] = useState<number>(0);
@@ -876,29 +999,16 @@ function App() {
   const [stakingRewards, setStakingRewards] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showError, setShowError] = useState<string | null>(null);
-
-  const TokenBalance = dynamic(
-    () =>
-      import("../components/ui/TokenBalance").then((mod) => mod.TokenBalance),
-    {
-      ssr: false,
-      loading: () => <div>Cargando balance...</div>, // Asegúrate de usar un fallback consistente
-    }
-  );
+  const [acc, setAcc] = useState<GetAccountReturnType>({});
 
   const account = useAccount();
 
+  useEffect(() => {
+    setAcc(account);
+  }, [account]);
+
   const { connectors, connect, status, error } = useConnect();
   const { disconnect } = useDisconnect();
-  const { data: hash, writeContract } = useWriteContract();
-
-  // useEffect(() => {
-  //   const init = async () => {
-  //     await FetchTokenBalance(account, setErc20TokenBalance, setShowError);
-  //   };
-
-  //   init();
-  // }, []);
 
   // await fetchTokenBalance(signer, account, setBalance, setError);
   return (
@@ -925,26 +1035,26 @@ function App() {
           <div>
             <h2>Account</h2>
             <br />
-            <div className="flex justify-between">
+            <div className="flex justify-between py-2">
               <span>status:</span>
-              <span className="font-mono">{account.status}</span>
+              <span className="font-mono">{acc.status}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between py-2">
               <span>addresses:</span>
-              <span className="font-mono">
-                {JSON.stringify(account.addresses)}
-              </span>
+              <span className="font-mono">{JSON.stringify(acc.addresses)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between py-2">
               <span>chainId:</span>
-              <span className="font-mono">{account.chainId}</span>
+              <span className="font-mono">{acc.chainId}</span>
             </div>
 
-            {account.status === "connected" && (
-              <Button type="button" onClick={() => disconnect()}>
-                Disconnect
-              </Button>
-            )}
+            <div className="flex justify-between py-2">
+              {account.status === "connected" && (
+                <Button type="button" onClick={() => disconnect()}>
+                  Disconnect
+                </Button>
+              )}
+            </div>
           </div>
 
           <div>
@@ -961,11 +1071,16 @@ function App() {
             <div>{status}</div>
             <div>{error?.message}</div>
           </div>
-          {account?.status === "connected" && (
-            <div>
-              <TokenBalance address={account?.addresses[0]} />
-            </div>
-          )}
+          <div className="flex justify-between py-2">
+            {account?.status === "connected" && (
+              <div>
+                <TokenBalance address={account?.addresses[0]} />
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between py-2">
+            {account?.status === "connected" && <div>{<ClaimTokens />}</div>}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -1002,70 +1117,106 @@ export function Providers(props: {
 }
 
 
-// Path: src/components/ui/TokenBalance.tsx
+// Path: src/components/ui/ClaimTokens.tsx
 
 "use client";
-import React, { useEffect, useState } from "react";
-import { useReadContract } from "wagmi";
-import { ethers } from "ethers";
-import tokenAbi from "../../../../abis/MyToken.json";
 
-const TokenBalance = ({ address }: { address: string }) => {
-  const [balance, setBalance] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button"; // Asegúrate de importar tu componente de botón correctamente
+import { useWriteContract } from "wagmi";
+import { FAUCET_ADDRESS } from "@/config";
+import faucetAbi from "../../../../abis/Faucet.json";
+const contractAddress: `0x${string}` = FAUCET_ADDRESS as `0x${string}`;
 
-  const contractAddress = "0x73C4EFcCb0340bdFd2C0d8B401f4A7CfBc07fd07";
+const ClaimTokens: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const { data: hash, writeContract } = useWriteContract();
 
-  // Validación previa de la dirección
-  useEffect(() => {
-    if (!ethers.isAddress(address)) {
-      setError(
-        "Dirección inválida. Asegúrate de ingresar una dirección válida."
-      );
-    } else if (!ethers.isAddress(contractAddress)) {
-      setError(
-        "La dirección del contrato es inválida. Asegúrate de configurarla correctamente."
-      );
-    } else {
-      setError(null); // Reinicia el error si ambas direcciones son válidas
+  const handleClaimTokens = async () => {
+    setLoading(true);
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: faucetAbi.abi,
+        functionName: "claimTokens",
+        // args: [BigInt(tokenId)],
+      });
+    } catch (error) {
+      console.error("Error al reclamar tokens", error);
+    } finally {
+      setLoading(false);
     }
-  }, [address, contractAddress]);
-
-  const { data, error: contractError } = useReadContract({
-    abi: tokenAbi.abi,
-    address: contractAddress,
-    functionName: "totalSupply",
-    // functionName: "balanceOf",
-    // args: [address],
-  });
-
-  useEffect(() => {
-    if (contractError) {
-      setError(`Error al leer el contrato: ${contractError.message}`);
-    } else if (data) {
-      try {
-        const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
-        setBalance(formattedBalance);
-      } catch (formatError) {
-        setError("Error al formatear el balance recibido.");
-      }
-    }
-  }, [data, contractError]);
-
-  if (error) {
-    return <div style={{ color: "red" }}>Error: {error}</div>;
-  }
+  };
 
   return (
-    <div>
-      {balance !== null
-        ? `Balance: ${balance.toLocaleString()} tokens`
-        : "Cargando balance..."}
-    </div>
+    <Button onClick={handleClaimTokens} disabled={loading}>
+      {loading ? "Reclamando..." : "Claim Tokens"}
+    </Button>
   );
 };
 
-export { TokenBalance };
+export default ClaimTokens;
+
+
+// Path: src/components/ui/TokenBalance.tsx
+
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { CircularProgress, Typography } from "@mui/material";
+import { useReadContract, useAccount, useChainId } from "wagmi";
+import { ethers } from "ethers";
+import tokenAbi from "../../../../abis/MyToken.json";
+import { ERC20_ADDRESS } from "@/config";
+
+const TokenBalance = ({ address }: { address: `0x${string}` | undefined }) => {
+  const { status } = useAccount(); // Obtiene el estado de la cuenta
+  const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
+  const [balance, setBalance] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Declarar el hook `useReadContract` fuera del condicional
+  const {
+    data,
+    error: contractError,
+    isLoading,
+  } = useReadContract({
+    abi: tokenAbi.abi,
+    address: contractAddress,
+    functionName: "balanceOf",
+    args: [address],
+    enabled: status === "connected", // Solo habilitar la consulta si está conectado
+    watch: true, // Habilita la actualización en tiempo real
+  });
+  const chainId = useChainId();
+  useEffect(() => {
+    if (contractError) {
+      // setBalance(0);
+      setError("Error al obtener el balance del contrato");
+    } else if (data) {
+      const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
+      setBalance(formattedBalance);
+    }
+  }, [data, contractError]);
+
+  if (isLoading) {
+    return <CircularProgress />;
+  }
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
+
+  return (
+    <Typography>
+      {balance !== null
+        ? `Balance: ${balance.toLocaleString()} tokens`
+        : "Cargando balance..."}
+    </Typography>
+  );
+};
+
+export default TokenBalance;
 
 
 // Path: src/components/ui/button.tsx
@@ -1222,8 +1373,13 @@ export {
 
 // Path: src/config.ts
 
-import { http, createConfig, createStorage, createClient } from "wagmi";
-import { mainnet, sepolia } from "wagmi/chains";
+import { http, createConfig, createStorage } from "wagmi";
+import {
+  fantomSonicTestnet,
+  mainnet,
+  polygonAmoy,
+  sepolia,
+} from "wagmi/chains";
 import { injected, metaMask, safe } from "wagmi/connectors";
 import { defineChain } from "viem";
 
@@ -1254,46 +1410,21 @@ const localhost = defineChain({
   testnet: true, // Marcar como testnet
 });
 
-// Definir la Fantom testnet (chainId: 4002)
-const fantomTestnet = defineChain({
-  id: 4002,
-  name: "Fantom Testnet",
-  network: "fantom-testnet",
-  nativeCurrency: {
-    name: "Fantom",
-    symbol: "FTM",
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.testnet.fantom.network"], // URL RPC de la fantom testnet
-    },
-    public: {
-      http: ["https://rpc.testnet.fantom.network"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Fantom Testnet Explorer",
-      url: "https://explorer.testnet.fantom.network/",
-    },
-  },
-  testnet: true,
-});
-
 // Configurar wagmi con las cadenas
 export const config = createConfig({
-  chains: [mainnet, sepolia], //localhost], // Agregar la red localhost
+  chains: [mainnet, sepolia, fantomSonicTestnet, polygonAmoy], //localhost], // Agregar la red localhost
 
-  multiInjectedProviderDiscovery: false,
-  ssr: false, // is in server side rendering?
+  multiInjectedProviderDiscovery: true,
+  // multiInjectedProviderDiscovery: false,
+  ssr: true, // is in server side rendering?
   // storage: createStorage({ storage: window.localStorage }),
   connectors: [injected(), metaMask(), safe()],
   // connectors: [metaMask(), safe()],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
-    [fantomTestnet.id]: http(), // Agregar transport para Fantom testnet
+    [fantomSonicTestnet.id]: http(), // Agregar transport para Fantom testnet
+    [polygonAmoy.id]: http(),
     // Si quieres volver a incluir localhost:
     [localhost.id]: http(),
   },
@@ -1315,7 +1446,22 @@ switch (targetNetwork) {
       process.env.NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS || "";
     targetChainId = 4002n;
     break;
-    
+  case "sepolia":
+    ERC20_ADDRESS = process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS || "";
+    STAKING_ADDRESS =
+      process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS || "";
+    FAUCET_ADDRESS =
+      process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS || "";
+    targetChainId = 11155111n;
+    break;
+  case "polygonTestnet":
+    ERC20_ADDRESS = process.env.NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS || "";
+    STAKING_ADDRESS =
+      process.env.NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS || "";
+    FAUCET_ADDRESS =
+      process.env.NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS || "";
+    targetChainId = 80002n;
+    break;
   case "localhost":
   default:
     ERC20_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS || "";
@@ -1340,6 +1486,29 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+
+// Path: src/styles/theme.js
+
+"use server";
+// styles/theme.js
+import { createTheme } from "@mui/material/styles";
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: "#1976d2",
+    },
+    secondary: {
+      main: "#dc004e",
+    },
+  },
+  typography: {
+    fontFamily: "Roboto, Arial, sans-serif",
+  },
+});
+
+export default theme;
 
 
 // Path: src/utils/web3Utils.ts

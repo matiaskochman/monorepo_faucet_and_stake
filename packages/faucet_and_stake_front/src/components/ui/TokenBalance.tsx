@@ -1,55 +1,57 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
-import React, { useEffect, useState } from "react";
-import { useReadContract } from "wagmi";
+
+import React, { useState, useEffect } from "react";
+import { CircularProgress, Typography } from "@mui/material";
+import { useReadContract, useAccount, useChainId } from "wagmi";
 import { ethers } from "ethers";
 import tokenAbi from "../../../../abis/MyToken.json";
 import { ERC20_ADDRESS } from "@/config";
 
-const TokenBalance = ({ address }: { address: string }) => {
+const TokenBalance = ({ address }: { address: `0x${string}` | undefined }) => {
+  const { status } = useAccount(); // Obtiene el estado de la cuenta
+  const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
-
-  // Validación previa de la dirección
-  useEffect(() => {
-    if (!ethers.isAddress(address)) {
-      setError(
-        "Dirección inválida. Asegúrate de ingresar una dirección válida."
-      );
-    } else if (!ethers.isAddress(contractAddress)) {
-      setError(
-        "La dirección del contrato es inválida. Asegúrate de configurarla correctamente."
-      );
-    } else {
-      setError(null); // Reinicia el error si ambas direcciones son válidas
-    }
-  }, [address, contractAddress]);
-
-  const { data, error: contractError } = useReadContract({
+  // Declarar el hook `useReadContract` fuera del condicional
+  const {
+    data,
+    error: contractError,
+    isLoading,
+  } = useReadContract({
     abi: tokenAbi.abi,
     address: contractAddress,
-    // functionName: "totalSupply",
     functionName: "balanceOf",
     args: [address],
+    enabled: status === "connected", // Solo habilitar la consulta si está conectado
+    watch: true, // Habilita la actualización en tiempo real
   });
-  let formattedBalance = 0;
-  if (data) {
-    formattedBalance = parseFloat(ethers.formatUnits(data, 6)) | 0;
+  const chainId = useChainId();
+  useEffect(() => {
+    if (contractError) {
+      // setBalance(0);
+      setError("Error al obtener el balance del contrato");
+    } else if (data) {
+      const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
+      setBalance(formattedBalance);
+    }
+  }, [data, contractError]);
+
+  if (isLoading) {
+    return <CircularProgress />;
   }
 
   if (error) {
-    return <div style={{ color: "red" }}>Error: {error}</div>;
+    return <Typography color="error">{error}</Typography>;
   }
 
   return (
-    <div>
-      {formattedBalance !== null
-        ? `Balance: ${formattedBalance?.toLocaleString()} tokens`
+    <Typography>
+      {balance !== null
+        ? `Balance: ${balance.toLocaleString()} tokens`
         : "Cargando balance..."}
-    </div>
+    </Typography>
   );
 };
 
-export { TokenBalance };
+export default TokenBalance;

@@ -1,3 +1,4 @@
+"use client";
 import { useReadContract } from "wagmi";
 import { config } from "../../config";
 export function ReadContract() {
