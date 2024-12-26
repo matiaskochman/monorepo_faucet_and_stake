@@ -12,7 +12,7 @@ import {
 import { ethers } from "ethers";
 // import { useStaking } from "../../hooks/useStake";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
-import { useWriteContract } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import tokenAbi from "../../../../abis/MyToken.json";
 import stakingAbi from "../../../../abis/Staking.json";
 
@@ -39,13 +39,30 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
     // data: approvalHash,
     // isPending: isAllowancePending,
   } = useWriteContract();
+  // const {
+  //   writeContractAsync: writeStaking,
+  //   data: stakeHash,
+  //   isPending: isStakingPending,
+  //   // isSuccess: isStakedSuccess,
+  // } = useWriteContract();
+
   const {
-    writeContractAsync: writeStaking,
-    // data: stakeHash,
-    // isPending: isStakingPending,
-    isSuccess: isStakedSuccess,
+    data: hash,
+    // error,
+    isPending: isStakingPending,
+    writeContract: writeStaking,
   } = useWriteContract();
-  // const account = useAccount();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+  useEffect(() => {
+    refetchStakedBalance();
+    refetchTokenBalance();
+    setStakeAmount(0);
+    setUnstakeAmount(0);
+  }, [isConfirmed, refetchStakedBalance, refetchTokenBalance]);
 
   const stakingAddress = contractAddresses?.STAKING_ADDRESS;
   const tokenAddress = contractAddresses?.ERC20_ADDRESS;
@@ -81,10 +98,10 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
         functionName: "stake",
         args: [amountInTokens],
       });
-      refetchStakedBalance();
-      refetchTokenBalance();
       setError(null);
     } else {
+      setStakeAmount(0);
+      setUnstakeAmount(0);
       setError("not enogh token balance");
     }
   };
@@ -102,6 +119,8 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
       });
       setError(null);
     } else {
+      setStakeAmount(0);
+      setUnstakeAmount(0);
       setError("staked balance not enogh");
     }
   };
@@ -132,7 +151,7 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
             fullWidth
             variant="contained"
             onClick={handleStake}
-            disabled={!stakeAmount}
+            // disabled={!stakeAmount}
           >
             Stake
           </Button>
@@ -157,7 +176,7 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
             fullWidth
             variant="contained"
             onClick={handleUnstake}
-            disabled={!unstakeAmount}
+            // disabled={!unstakeAmount}
             color="secondary"
           >
             Unstake
