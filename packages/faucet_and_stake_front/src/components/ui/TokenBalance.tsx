@@ -1,69 +1,28 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { CircularProgress, Typography } from "@mui/material";
-import { useReadContract, useAccount } from "wagmi";
+import React from "react";
+import { Typography } from "@mui/material";
 import { ethers } from "ethers";
-import tokenAbi from "../../../../abis/MyToken.json";
-// import { ERC20_ADDRESS } from "@/config";
 
 interface TokenBalanceProps {
-  address?: `0x${string}`;
-  contractAddress: `0x${string}`;
+  balance: bigint;
 }
 
-const TokenBalance: React.FC<TokenBalanceProps> = ({
-  address,
-  contractAddress,
-}) => {
-  const { status } = useAccount(); // Obtiene el estado de la cuenta
-  // const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
-  const [balance, setBalance] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const TokenBalance: React.FC<TokenBalanceProps> = ({ balance }) => {
+  let displayBalance = "0"; // Default display value
 
-  const account = useAccount();
-  // Declarar el hook `useReadContract` fuera del condicional
-  const {
-    data,
-    error: contractError,
-    isLoading,
-    refetch,
-  } = useReadContract({
-    abi: tokenAbi.abi,
-    address: contractAddress,
-    functionName: "balanceOf",
-    args: [address],
-    enabled: status === "connected", // Solo habilitar la consulta si está conectado
-    // watch: true, // Habilita la actualización en tiempo real
-  });
-  // const chainId = useChainId();
-  useEffect(() => {
-    if (contractError) {
-      // setBalance(0);
-      setError("Error al obtener el balance del contrato");
-    } else if (data) {
-      const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
-      setBalance(formattedBalance);
-      setError(null);
+  if (balance != null) {
+    // Check for both null and undefined
+    try {
+      displayBalance = ethers.formatUnits(balance, 6);
+    } catch (error) {
+      console.error("Error formatting balance:", error);
+      displayBalance = "Error"; // Display an error message
     }
-  }, [data, contractError]);
-
-  useEffect(() => {
-    refetch();
-  }, [account.address, account.chainId, refetch]);
-  if (isLoading) {
-    return <CircularProgress />;
   }
-
-  if (error) {
-    return <Typography color="error">{error}</Typography>;
-  }
-
   return (
     <Typography>
-      {balance !== null
-        ? `Balance: ${balance.toLocaleString()} tokens`
-        : "Balance: 0"}
+      {balance !== null ? `Balance: ${displayBalance} tokens` : "Balance: 0"}
     </Typography>
   );
 };

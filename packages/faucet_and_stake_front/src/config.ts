@@ -98,7 +98,7 @@ export const contractAddressesMap: Record<number, ContractAddresses> = {
 };
 
 export function getContractAddresses(chainId: number): ContractAddresses {
-  return contractAddressesMap[chainId] || null;
+  return contractAddressesMap[chainId] || contractAddressesMap[11155111];
 }
 
 export function getConfig() {

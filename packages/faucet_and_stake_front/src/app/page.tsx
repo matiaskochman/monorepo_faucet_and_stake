@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -10,19 +10,48 @@ import {
   CardHeader,
   Divider,
 } from "@mui/material";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { ethers } from "ethers";
+import { useAccount, useConnect, useDisconnect, useReadContract } from "wagmi";
 import TokenBalance from "@/components/ui/TokenBalance";
 import ClaimTokens from "@/components/ui/ClaimTokens";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
-
 import { StakingComponent } from "@/components/ui/Staking";
+import tokenAbi from "../../../abis/MyToken.json";
 
 export default function Web3TokenDashboard() {
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
   const account = useAccount();
-
   const contractAddresses = useContractAddresses();
+  const [getTokenBalance, setTokenBalance] = useState<string>("");
+  const [getAddress, setAddress] = useState<`0x${string}` | undefined>("0x0");
+  // const [getERC20ContractAddress, setERC20ContractAddress] = useState<
+  //   `0x${string}` | undefined
+  // >("0x0");
+
+  const {
+    data: tokenBalanceValue,
+    error: contractError,
+    isLoading,
+    refetch: refetchTokenBalance,
+  } = useReadContract({
+    abi: tokenAbi.abi,
+    address: contractAddresses.ERC20_ADDRESS,
+    functionName: "balanceOf",
+    args: [getAddress],
+    enabled: account.isConnected, // Solo habilitar la consulta si está conectado
+    // watch: true, // Habilita la actualización en tiempo real
+  });
+
+  useEffect(() => {
+    setAddress(account.address);
+    refetchTokenBalance();
+  }, [
+    account.address,
+    account.chainId,
+    tokenBalanceValue,
+    refetchTokenBalance,
+  ]);
 
   // Manejar la conexión y desconexión
   const handleConnect = (connectorId: string) => {
@@ -152,10 +181,7 @@ export default function Web3TokenDashboard() {
           {/* Componente TokenBalance */}
           {account.isConnected && contractAddresses && (
             <Box sx={{ mt: 2 }}>
-              <TokenBalance
-                address={account.address}
-                contractAddress={contractAddresses.ERC20_ADDRESS}
-              />
+              <TokenBalance balance={tokenBalanceValue as bigint} />
             </Box>
           )}
 
