@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { CircularProgress, Typography } from "@mui/material";
-import { useReadContract, useAccount, useChainId } from "wagmi";
+import { useReadContract, useAccount } from "wagmi";
 import { ethers } from "ethers";
 import tokenAbi from "../../../../abis/MyToken.json";
 // import { ERC20_ADDRESS } from "@/config";
@@ -21,20 +21,22 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const account = useAccount();
   // Declarar el hook `useReadContract` fuera del condicional
   const {
     data,
     error: contractError,
     isLoading,
+    refetch,
   } = useReadContract({
     abi: tokenAbi.abi,
     address: contractAddress,
     functionName: "balanceOf",
     args: [address],
     enabled: status === "connected", // Solo habilitar la consulta si está conectado
-    watch: true, // Habilita la actualización en tiempo real
+    // watch: true, // Habilita la actualización en tiempo real
   });
-  const chainId = useChainId();
+  // const chainId = useChainId();
   useEffect(() => {
     if (contractError) {
       // setBalance(0);
@@ -46,6 +48,9 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
     }
   }, [data, contractError]);
 
+  useEffect(() => {
+    refetch();
+  }, [account.address, account.chainId, refetch]);
   if (isLoading) {
     return <CircularProgress />;
   }
@@ -58,7 +63,7 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
     <Typography>
       {balance !== null
         ? `Balance: ${balance.toLocaleString()} tokens`
-        : "Cargando balance..."}
+        : "Balance: 0"}
     </Typography>
   );
 };

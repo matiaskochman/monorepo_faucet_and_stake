@@ -62,53 +62,42 @@ interface ContractAddresses {
 export const contractAddressesMap: Record<number, ContractAddresses> = {
   // Ejemplo para localhost (chainId: 41337)
   41337: {
-    ERC20_ADDRESS:
-      (process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS as `0x${string}`) || "",
-    STAKING_ADDRESS:
-      (process.env.NEXT_PUBLIC_LOCAL_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env.NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS as `0x${string}`) || "",
+    ERC20_ADDRESS: process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS as `0x${string}`,
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_LOCAL_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS as `0x${string}`,
   },
   // Ejemplo para Sepolia (chainId: 11155111)
   11155111: {
-    ERC20_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS as `0x${string}`) || "",
-    STAKING_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS as `0x${string}`) || "",
+    ERC20_ADDRESS: process.env
+      .NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS as `0x${string}`,
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS as `0x${string}`,
   },
   // Añade más configuraciones para otras redes según sea necesario
   4002: {
     ERC20_ADDRESS:
       (process.env.NEXT_PUBLIC_FANTOM_TESTNET_ERC20_ADDRESS as `0x${string}`) ||
       "",
-    STAKING_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS as `0x${string}`) || "",
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS as `0x${string}`,
   }, // Fantom Testnet
   80002: {
-    ERC20_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS as `0x${string}`) || "",
-    STAKING_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS as `0x${string}`) || "",
+    ERC20_ADDRESS: process.env
+      .NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS as `0x${string}`,
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS as `0x${string}`,
   }, // Polygon Testnet
 };
 
-export function getContractAddresses(
-  chainId: number
-): ContractAddresses | null {
+export function getContractAddresses(chainId: number): ContractAddresses {
   return contractAddressesMap[chainId] || null;
 }
 

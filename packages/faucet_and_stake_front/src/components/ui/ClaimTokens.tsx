@@ -22,7 +22,7 @@ const ClaimTokens = ({
         address: contractAddress,
         abi: faucetAbi.abi,
         functionName: "claimTokens",
-        // args: [BigInt(tokenId)],
+        args: [],
       });
     } catch (error) {
       console.error("Error al reclamar tokens", error);
