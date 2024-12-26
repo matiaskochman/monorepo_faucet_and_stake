@@ -12,31 +12,28 @@ import {
 import { ethers } from "ethers";
 // import { useStaking } from "../../hooks/useStake";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useWriteContract } from "wagmi";
 import tokenAbi from "../../../../abis/MyToken.json";
 import stakingAbi from "../../../../abis/Staking.json";
 
 interface StakingComponentProps {
   stakedAmount: bigint;
+  tokenBalance: bigint;
   refetchTokenBalance: () => void;
   refetchStakedBalance: () => void;
 }
 
 export const StakingComponent: React.FC<StakingComponentProps> = ({
   stakedAmount,
+  tokenBalance,
   refetchTokenBalance,
   refetchStakedBalance,
 }) => {
-  // const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // const [stakedAmount, setStakedAmount] = useState<number>(0);
-  // const [allowance, setAllowance] = useState<bigint>(0n);
   const [stakeAmount, setStakeAmount] = useState<number>(0);
-
   const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
-
   const contractAddresses = useContractAddresses();
+
   const {
     writeContractAsync: writeAllowance,
     // data: approvalHash,
@@ -70,21 +67,26 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
 
     // Compara allowance con parsedAmount como bigints
     const amountInTokens = ethers.parseUnits(stakeAmount.toString(), 6);
-    await writeAllowance({
-      address: tokenAddress,
-      abi: tokenAbi.abi,
-      functionName: "approve",
-      args: [stakingAddress, amountInTokens],
-    });
+    if (tokenBalance > Number(amountInTokens)) {
+      await writeAllowance({
+        address: tokenAddress,
+        abi: tokenAbi.abi,
+        functionName: "approve",
+        args: [stakingAddress, amountInTokens],
+      });
 
-    await writeStaking({
-      address: stakingAddress,
-      abi: stakingAbi.abi,
-      functionName: "stake",
-      args: [amountInTokens],
-    });
-    refetchStakedBalance();
-    refetchTokenBalance();
+      await writeStaking({
+        address: stakingAddress,
+        abi: stakingAbi.abi,
+        functionName: "stake",
+        args: [amountInTokens],
+      });
+      refetchStakedBalance();
+      refetchTokenBalance();
+      setError(null);
+    } else {
+      setError("not enogh token balance");
+    }
   };
 
   const handleUnstake = async () => {
@@ -98,6 +100,7 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
         functionName: "unstake",
         args: [amountInTokens],
       });
+      setError(null);
     } else {
       setError("staked balance not enogh");
     }
@@ -132,11 +135,6 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
             disabled={!stakeAmount}
           >
             Stake
-            {/* {isWaitingForApproval ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "Stake"
-            )} */}
           </Button>
         </Box>
 
@@ -169,7 +167,7 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
       {error && (
         <Box sx={{ marginTop: 4 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            staked balance not enogh
+            {error}
           </Typography>
         </Box>
       )}

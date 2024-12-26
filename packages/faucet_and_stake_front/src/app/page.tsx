@@ -207,6 +207,7 @@ export default function Web3TokenDashboard() {
           {account.isConnected && contractAddresses && (
             <StakingComponent
               stakedAmount={stakedData as bigint}
+              tokenBalance={tokenBalanceValue as bigint}
               refetchTokenBalance={refetchTokenBalance}
               refetchStakedBalance={refetchStakedAmount}
             />
