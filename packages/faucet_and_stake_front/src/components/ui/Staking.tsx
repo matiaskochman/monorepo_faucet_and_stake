@@ -16,11 +16,21 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import tokenAbi from "../../../../abis/MyToken.json";
 import stakingAbi from "../../../../abis/Staking.json";
 
-export const StakingComponent = () => {
+interface StakingComponentProps {
+  stakedAmount: bigint;
+  refetchTokenBalance: () => void;
+  refetchStakedBalance: () => void;
+}
+
+export const StakingComponent: React.FC<StakingComponentProps> = ({
+  stakedAmount,
+  refetchTokenBalance,
+  refetchStakedBalance,
+}) => {
   // const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [stakedAmount, setStakedAmount] = useState<number>(0);
+  // const [stakedAmount, setStakedAmount] = useState<number>(0);
   // const [allowance, setAllowance] = useState<bigint>(0n);
   const [stakeAmount, setStakeAmount] = useState<number>(0);
 
@@ -38,46 +48,21 @@ export const StakingComponent = () => {
     // isPending: isStakingPending,
     isSuccess: isStakedSuccess,
   } = useWriteContract();
-  const account = useAccount();
+  // const account = useAccount();
 
   const stakingAddress = contractAddresses?.STAKING_ADDRESS;
-
-  const {
-    data: stakedData,
-    error: contractError,
-    isLoading,
-    refetch,
-  } = useReadContract({
-    address: stakingAddress,
-    abi: stakingAbi.abi, // ¡IMPORTANTE!
-    functionName: "getStakedAmount",
-    args: [account.address], // Manejo de undefined para el argumento
-    // enabled: !!stakingAddress,
-    // watch: true,
-  });
   const tokenAddress = contractAddresses?.ERC20_ADDRESS;
 
-  useEffect(() => {
-    refetch();
-  }, [account.address, account.chain, isStakedSuccess, refetch]);
-  useEffect(() => {
-    if (contractError) {
-      // setBalance(0);
-      setError("Error al obtener el balance del contrato");
-    } else if (stakedData) {
-      const formattedBalance = parseFloat(ethers.formatUnits(stakedData, 6));
-      setStakedAmount(formattedBalance);
-      setError(null);
-    }
-  }, [stakedData, contractError]);
-  // const { stake, unstake, isWaitingForApproval, approvalHash, stakeHash } =
-  //   useStaking(stakingAddress, contractAddresses?.ERC20_ADDRESS);
+  let displayStakedBalance = "0"; // Default display value
 
-  if (isLoading) {
-    // return <CircularProgress />;
-    console.log("is loading");
-  } else {
-    console.log("not loading");
+  if (stakedAmount != null) {
+    // Check for both null and undefined
+    try {
+      displayStakedBalance = ethers.formatUnits(stakedAmount, 6);
+    } catch (error) {
+      console.error("Error formatting balance:", error);
+      displayStakedBalance = "Error"; // Display an error message
+    }
   }
 
   const handleStake = async () => {
@@ -98,6 +83,8 @@ export const StakingComponent = () => {
       functionName: "stake",
       args: [amountInTokens],
     });
+    refetchStakedBalance();
+    refetchTokenBalance();
   };
 
   const handleUnstake = async () => {
@@ -121,7 +108,8 @@ export const StakingComponent = () => {
       <CardContent>
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ mt: 2 }}>
-            Staked Amount: {stakedAmount ? stakedAmount.toString() : "0"}
+            Staked Amount:{" "}
+            {displayStakedBalance ? displayStakedBalance.toString() : "0"}
           </Typography>
           <Typography variant="h6" sx={{ mb: 2 }}>
             Stake

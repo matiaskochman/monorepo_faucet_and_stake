@@ -10,20 +10,20 @@ import {
   CardHeader,
   Divider,
 } from "@mui/material";
-import { ethers } from "ethers";
 import { useAccount, useConnect, useDisconnect, useReadContract } from "wagmi";
 import TokenBalance from "@/components/ui/TokenBalance";
 import ClaimTokens from "@/components/ui/ClaimTokens";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
 import { StakingComponent } from "@/components/ui/Staking";
 import tokenAbi from "../../../abis/MyToken.json";
+import stakingAbi from "../../../abis/Staking.json";
 
 export default function Web3TokenDashboard() {
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
   const account = useAccount();
   const contractAddresses = useContractAddresses();
-  const [getTokenBalance, setTokenBalance] = useState<string>("");
+  // const [getTokenBalance, setTokenBalance] = useState<string>("");
   const [getAddress, setAddress] = useState<`0x${string}` | undefined>("0x0");
   // const [getERC20ContractAddress, setERC20ContractAddress] = useState<
   //   `0x${string}` | undefined
@@ -31,8 +31,8 @@ export default function Web3TokenDashboard() {
 
   const {
     data: tokenBalanceValue,
-    error: contractError,
-    isLoading,
+    error: tokenBalanceError,
+    isLoading: tokenBalanceLoading,
     refetch: refetchTokenBalance,
   } = useReadContract({
     abi: tokenAbi.abi,
@@ -43,14 +43,31 @@ export default function Web3TokenDashboard() {
     // watch: true, // Habilita la actualización en tiempo real
   });
 
+  const {
+    data: stakedData,
+    error: stakedDataError,
+    isLoading: stakedAmountLoading,
+    refetch: refetchStakedAmount,
+  } = useReadContract({
+    address: contractAddresses.STAKING_ADDRESS,
+    abi: stakingAbi.abi, // ¡IMPORTANTE!
+    functionName: "getStakedAmount",
+    args: [getAddress], // Manejo de undefined para el argumento
+    // enabled: !!stakingAddress,
+    // watch: true,
+  });
+
   useEffect(() => {
     setAddress(account.address);
     refetchTokenBalance();
+    refetchStakedAmount();
   }, [
     account.address,
     account.chainId,
     tokenBalanceValue,
+    stakedData,
     refetchTokenBalance,
+    refetchStakedAmount,
   ]);
 
   // Manejar la conexión y desconexión
@@ -187,7 +204,13 @@ export default function Web3TokenDashboard() {
 
           {/* Acciones de staking */}
 
-          {account.isConnected && contractAddresses && <StakingComponent />}
+          {account.isConnected && contractAddresses && (
+            <StakingComponent
+              stakedAmount={stakedData as bigint}
+              refetchTokenBalance={refetchTokenBalance}
+              refetchStakedBalance={refetchStakedAmount}
+            />
+          )}
         </CardContent>
       </Card>
     </Box>
