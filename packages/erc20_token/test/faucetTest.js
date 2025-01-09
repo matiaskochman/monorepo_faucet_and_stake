@@ -4,7 +4,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Faucet", function () {
-  let myToken;
+  let pesosArgToken;
   let faucet;
   let owner;
   let addr1;
@@ -12,21 +12,23 @@ describe("Faucet", function () {
   const CLAIM_AMOUNT = ethers.parseUnits("200", 6); // 200 tokens con 6 decimales
 
   async function deployContracts() {
-    const MyTokenFactory = await ethers.getContractFactory("MyToken");
-    console.log("Obtained MyToken contract factory");
+    const PesosArgTokenFactory = await ethers.getContractFactory(
+      "PesosArgToken"
+    );
+    console.log("Obtained PesosArgToken contract factory");
 
-    myToken = await MyTokenFactory.deploy();
-    console.log("MyToken deploy transaction sent");
+    pesosArgToken = await PesosArgTokenFactory.deploy();
+    console.log("PesosArgToken deploy transaction sent");
 
     // Esperar a que el contrato sea desplegado completamente
-    await myToken.waitForDeployment();
-    const myTokenAddress = await myToken.getAddress(); // ← Uso de getAddress()
-    console.log("MyToken desplegado en:", myTokenAddress);
+    await pesosArgToken.waitForDeployment();
+    const pesosArgTokenAddress = await pesosArgToken.getAddress(); // ← Uso de getAddress()
+    console.log("PesosArgToken desplegado en:", pesosArgTokenAddress);
 
     const FaucetFactory = await ethers.getContractFactory("Faucet");
     console.log("Obtained Faucet contract factory");
 
-    faucet = await FaucetFactory.deploy(myTokenAddress); // ← Aquí usamos myTokenAddress
+    faucet = await FaucetFactory.deploy(pesosArgTokenAddress); // ← Aquí usamos PesosArgTokenAddress
     console.log("Faucet deploy transaction sent");
 
     // Esperar a que el contrato sea desplegado completamente
@@ -34,8 +36,10 @@ describe("Faucet", function () {
     const faucetAddress = await faucet.getAddress(); // ← Uso de getAddress()
     console.log("Faucet desplegado en:", faucetAddress);
 
-    // Transferir propiedad de MyToken al Faucet
-    const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
+    // Transferir propiedad de PesosArgToken al Faucet
+    const transferOwnershipTx = await pesosArgToken.transferOwnership(
+      faucetAddress
+    );
     console.log("TransferOwnership transaction sent");
     await transferOwnershipTx.wait();
     console.log("TransferOwnership transaction confirmed");
@@ -45,7 +49,10 @@ describe("Faucet", function () {
     console.log("MINTER_ROLE hash:", MINTER_ROLE);
 
     // Otorgar MINTER_ROLE al Faucet
-    const grantRoleTx = await myToken.grantRole(MINTER_ROLE, faucetAddress);
+    const grantRoleTx = await pesosArgToken.grantRole(
+      MINTER_ROLE,
+      faucetAddress
+    );
     console.log("grantRole transaction sent");
     await grantRoleTx.wait();
     console.log("grantRole transaction confirmed");
@@ -59,8 +66,8 @@ describe("Faucet", function () {
   describe("Deployment", function () {
     it("Should set the correct token address", async function () {
       const tokenAddress = await faucet.token();
-      const myTokenAddress = await myToken.getAddress(); // Comparamos con el real address del contrato
-      expect(tokenAddress).to.equal(myTokenAddress);
+      const pesosArgTokenAddress = await pesosArgToken.getAddress(); // Comparamos con el real address del contrato
+      expect(tokenAddress).to.equal(pesosArgTokenAddress);
     });
 
     it("Should set the correct claim amount", async function () {
@@ -68,9 +75,9 @@ describe("Faucet", function () {
     });
 
     it("Should transfer token ownership to faucet", async function () {
-      const myTokenOwner = await myToken.owner();
+      const pesosArgTokenOwner = await pesosArgToken.owner();
       const faucetAddress = await faucet.getAddress();
-      expect(myTokenOwner).to.equal(faucetAddress);
+      expect(pesosArgTokenOwner).to.equal(faucetAddress);
     });
   });
 
@@ -83,12 +90,14 @@ describe("Faucet", function () {
         .withArgs(addr1.address)
         .and.to.emit(faucet, "TokensClaimed")
         .withArgs(addr1.address, CLAIM_AMOUNT)
-        .and.to.emit(myToken, "BeforeMint")
+        .and.to.emit(pesosArgToken, "BeforeMint")
         .withArgs(addr1.address, CLAIM_AMOUNT)
-        .and.to.emit(myToken, "Mint")
+        .and.to.emit(pesosArgToken, "Mint")
         .withArgs(addr1.address, CLAIM_AMOUNT);
 
-      expect(await myToken.balanceOf(addr1.address)).to.equal(CLAIM_AMOUNT);
+      expect(await pesosArgToken.balanceOf(addr1.address)).to.equal(
+        CLAIM_AMOUNT
+      );
     });
 
     it("Should prevent double claims", async function () {
@@ -140,12 +149,14 @@ describe("Faucet", function () {
       await expect(claimTx)
         .to.emit(faucet, "TokensClaimed")
         .withArgs(addr2.address, NEW_CLAIM_AMOUNT)
-        .and.to.emit(myToken, "BeforeMint")
+        .and.to.emit(pesosArgToken, "BeforeMint")
         .withArgs(addr2.address, NEW_CLAIM_AMOUNT)
-        .and.to.emit(myToken, "Mint")
+        .and.to.emit(pesosArgToken, "Mint")
         .withArgs(addr2.address, NEW_CLAIM_AMOUNT);
 
-      expect(await myToken.balanceOf(addr2.address)).to.equal(NEW_CLAIM_AMOUNT);
+      expect(await pesosArgToken.balanceOf(addr2.address)).to.equal(
+        NEW_CLAIM_AMOUNT
+      );
     });
   });
 });

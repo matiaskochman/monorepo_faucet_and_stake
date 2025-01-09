@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./MyToken.sol";
+import "./PesosArgToken.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract Staking is ReentrancyGuard {
@@ -10,7 +10,7 @@ contract Staking is ReentrancyGuard {
         uint256 since;
     }
 
-    MyToken public token;
+    PesosArgToken public token;
     mapping(address => StakeInfo) public stakes;
     uint256 public constant REWARD_RATE = 1; // 0.1% per minute (for testing purposes)
 
@@ -19,7 +19,7 @@ contract Staking is ReentrancyGuard {
 
     constructor(address _token) {
         require(_token != address(0), "Token address cannot be zero");
-        token = MyToken(_token);
+        token = PesosArgToken(_token);
     }
 
     function stake(uint256 _amount) external nonReentrant {

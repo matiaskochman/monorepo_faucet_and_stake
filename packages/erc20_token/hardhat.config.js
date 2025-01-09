@@ -8,6 +8,7 @@ const {
   ACC6_PRIVATE_KEY,
   ETHERSCAN_TEST_API_KEY,
   POLYGON_AMOY_URL,
+  ARBITRUM_SEPOLIA_URL,
 } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -31,20 +32,25 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       chainId: 41337,
     },
-    sepolia: {
+    ethereum_sepolia: {
       url: ETH_SEPOLIA_URL,
       accounts: [ACC6_PRIVATE_KEY],
       chainId: 11155111,
     },
     fantomTestnet: {
       url: FANTOM_TESTNET_URL,
-      accounts: [PRIVATE_KEY],
+      accounts: [ACC6_PRIVATE_KEY],
       chainId: 4002,
     },
-    amoy: {
+    polygon_amoy: {
       url: POLYGON_AMOY_URL,
       accounts: [ACC6_PRIVATE_KEY],
       chainId: 80002,
+    },
+    arbitrum_sepolia: {
+      url: ARBITRUM_SEPOLIA_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 421614,
     },
   },
   // paths: {

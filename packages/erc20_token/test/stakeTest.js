@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { parseUnits } = ethers;
 
 describe("Staking", function () {
-  let myToken;
+  let pesosArgToken;
   let stakingContract;
   let stakingAddress;
   let owner;
@@ -14,40 +14,40 @@ describe("Staking", function () {
     [owner, user] = await ethers.getSigners();
     stakeAmount = parseUnits("10", 6); // 10 tokens con 6 decimales
 
-    // Deploy MyToken contract
-    const MyToken = await ethers.getContractFactory("MyToken");
-    myToken = await MyToken.deploy();
-    await myToken.waitForDeployment();
-    const myTokenAddress = await myToken.getAddress();
+    // Deploy PesosArgToken contract
+    const PesosArgToken = await ethers.getContractFactory("PesosArgToken");
+    pesosArgToken = await PesosArgToken.deploy();
+    await pesosArgToken.waitForDeployment();
+    const pesosArgTokenAddress = await pesosArgToken.getAddress();
 
     // Otorgar MINTER_ROLE al owner
     const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
-    await myToken.grantRole(MINTER_ROLE, owner.address);
+    await pesosArgToken.grantRole(MINTER_ROLE, owner.address);
 
     // Deploy Staking contract
     const Staking = await ethers.getContractFactory("Staking");
-    stakingContract = await Staking.deploy(myTokenAddress);
+    stakingContract = await Staking.deploy(pesosArgTokenAddress);
     await stakingContract.waitForDeployment();
     stakingAddress = await stakingContract.getAddress();
 
     // Grant MINTER_ROLE to Staking contract
-    await myToken.grantRole(MINTER_ROLE, stakingAddress);
+    await pesosArgToken.grantRole(MINTER_ROLE, stakingAddress);
 
     // Mint tokens for testing - mint extra for rewards
     const initialMint = parseUnits("2000", 6);
-    await myToken.mint(owner.address, initialMint);
+    await pesosArgToken.mint(owner.address, initialMint);
 
     // Transfer tokens to user for testing
-    await myToken.transfer(user.address, stakeAmount);
+    await pesosArgToken.transfer(user.address, stakeAmount);
   });
 
   it("Should allow user to stake tokens", async function () {
     // Verify user has enough tokens
-    const userBalance = await myToken.balanceOf(user.address);
+    const userBalance = await pesosArgToken.balanceOf(user.address);
     expect(userBalance).to.be.gte(stakeAmount);
 
     // Approve tokens for staking contract
-    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await pesosArgToken.connect(user).approve(stakingAddress, stakeAmount);
 
     // Store initial stake balance
     const initialStakeBalance = await stakingContract.getStakeInfo(
@@ -68,7 +68,7 @@ describe("Staking", function () {
 
   it("Should allow user to unstake tokens fully", async function () {
     // Approve and stake tokens
-    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await pesosArgToken.connect(user).approve(stakingAddress, stakeAmount);
     await stakingContract.connect(user).stake(stakeAmount);
 
     // Advance time by 10 minutes
@@ -79,13 +79,13 @@ describe("Staking", function () {
     const fullReward = await stakingContract.calculateReward(user.address);
 
     // Store initial balance
-    const initialBalance = await myToken.balanceOf(user.address);
+    const initialBalance = await pesosArgToken.balanceOf(user.address);
 
     // Unstake the full amount
     await stakingContract.connect(user).unstake(stakeAmount);
 
     // Get final balance and calculate expected final balance
-    const finalBalance = await myToken.balanceOf(user.address);
+    const finalBalance = await pesosArgToken.balanceOf(user.address);
     const expectedFinalBalance = initialBalance + stakeAmount + fullReward;
 
     // Verify final balance with tolerance
@@ -99,7 +99,7 @@ describe("Staking", function () {
 
   it("Should allow partial unstaking with proportional rewards", async function () {
     // Approve and stake tokens
-    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await pesosArgToken.connect(user).approve(stakingAddress, stakeAmount);
     await stakingContract.connect(user).stake(stakeAmount);
 
     // Advance time by 10 minutes to accumulate rewards
@@ -113,13 +113,13 @@ describe("Staking", function () {
     const partialReward = (totalReward * partialUnstakeAmount) / stakeAmount;
 
     // Store initial balance
-    const initialBalance = await myToken.balanceOf(user.address);
+    const initialBalance = await pesosArgToken.balanceOf(user.address);
 
     // Perform partial unstaking
     await stakingContract.connect(user).unstake(partialUnstakeAmount);
 
     // Get final balance after partial unstake
-    const finalBalance = await myToken.balanceOf(user.address);
+    const finalBalance = await pesosArgToken.balanceOf(user.address);
 
     // Calculate expected final balance
     const expectedFinalBalance =

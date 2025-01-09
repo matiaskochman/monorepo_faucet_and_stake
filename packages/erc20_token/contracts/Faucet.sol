@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./MyToken.sol";
+import "./PesosArgToken.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Faucet is AccessControl {
-    MyToken public token;
+    PesosArgToken public token;
     uint256 public claimAmount = 200 * 10 ** 6; // 200 MTK con 6 decimales
 
     mapping(address => bool) public hasClaimed;
@@ -22,7 +22,7 @@ contract Faucet is AccessControl {
 
     constructor(address tokenAddress) {
         require(tokenAddress != address(0), "Token address cannot be zero");
-        token = MyToken(tokenAddress);
+        token = PesosArgToken(tokenAddress);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(SETTER_ROLE, msg.sender);
     }

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MyToken is ERC20, AccessControl, Ownable {
+contract PesosArgToken is ERC20, AccessControl, Ownable {
     // Definir un rol para los minters
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -15,7 +15,7 @@ contract MyToken is ERC20, AccessControl, Ownable {
     event BeforeMint(address indexed to, uint256 amount);
     event Mint(address indexed to, uint256 amount);
 
-    constructor() ERC20("M Token", "MTK") {
+    constructor() ERC20("Pesos Argentinos Divisa Mundial", "ARS") {
         // Otorgar el rol de admin al deployer del contrato
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }

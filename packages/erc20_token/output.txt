@@ -512,7 +512,12 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  // const [deployer] = await hre.ethers.getSigners();
+  // Obtener la dirección específica
+  const specificAddress = "0x432Bcf17BC6F3c298a624fEcfdb608c3cacd121d";
+  // Obtener el signer desde esa dirección (asumiendo que está en las accounts de la red)
+  const deployer = await hre.ethers.getSigner(specificAddress);
+
   console.log("Desplegando contratos con la cuenta:", deployer.address);
 
   // Desplegar MyToken
@@ -708,6 +713,16 @@ main()
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
+const {
+  ETH_SEPOLIA_URL,
+  FANTOM_TESTNET_URL,
+  PRIVATE_KEY,
+  ACC6_PRIVATE_KEY,
+  ETHERSCAN_TEST_API_KEY,
+  POLYGON_AMOY_URL,
+  ARBITRUM_SEPOLIA_URL,
+} = process.env;
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -722,29 +737,32 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      accounts: {
-        count: 50,
-        accountsBalance: "10000000000000000000000", // 10000 ETH
-      },
-      mining: {
-        auto: true,
-        interval: 5000, // Intervalo de minado en ms
-        mempool: {
-          order: "fifo", // First in, first out
-        },
-      },
-      // hardfork: "shanghai", // Especifica el hardfork
+      accounts: { count: 50, accountsBalance: "10000000000000000000000" },
       chainId: 41337,
-      blockGasLimit: 30000000,
-      gasPrice: "auto",
-      throwOnTransactionFailures: true,
-      throwOnCallFailures: true,
-      allowUnlimitedContractSize: false, // Mantener en false para simular mainnet
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 41337,
-      timeout: 60000,
+    },
+    ethereum_sepolia: {
+      url: ETH_SEPOLIA_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 11155111,
+    },
+    fantomTestnet: {
+      url: FANTOM_TESTNET_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 4002,
+    },
+    polygon_amoy: {
+      url: POLYGON_AMOY_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 80002,
+    },
+    arbitrum_sepolia: {
+      url: ARBITRUM_SEPOLIA_URL,
+      accounts: [ACC6_PRIVATE_KEY],
+      chainId: 421614,
     },
   },
   // paths: {
@@ -773,14 +791,25 @@ module.exports = {
   // mocha: {
   //   timeout: 200000, // 200 segundos
   // },
-  // etherscan: {
-  //   apiKey: process.env.ETHERSCAN_API_KEY,
-  // },
-  // verify: {
-  //   etherscan: {
-  //     apiKey: process.env.ETHERSCAN_API_KEY,
-  //   },
-  // },
+  etherscan: {
+    apiKey: {
+      opera: process.env.FTM_TEST_API_KEY, // Mainnet
+      ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
+      sepolia: ETHERSCAN_TEST_API_KEY,
+      amoy: ETHERSCAN_TEST_API_KEY,
+    },
+  },
+  verify: {
+    etherscan: {
+      apiKey: {
+        opera: process.env.FTM_TEST_API_KEY, // Mainnet
+        ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
+        sepolia: ETHERSCAN_TEST_API_KEY,
+        amoy: ETHERSCAN_TEST_API_KEY,
+      },
+      ftmTestnet: "testnet_dummy_api_key", // Testnet placeholder
+    },
+  },
 };
 
 // // Manejo de tareas condicionales
