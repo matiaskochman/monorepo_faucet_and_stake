@@ -5,8 +5,10 @@ pragma solidity ^0.8.24;
 
 import "./PesosArgToken.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract Faucet is AccessControl {
+contract Faucet is AccessControl, ReentrancyGuard, Pausable {
     PesosArgToken public token;
     uint256 public claimAmount = 200 * 10 ** 6; // 200 MTK con 6 decimales
 
@@ -27,7 +29,7 @@ contract Faucet is AccessControl {
         _setupRole(SETTER_ROLE, msg.sender);
     }
 
-    function claimTokens() external {
+    function claimTokens() external nonReentrant whenNotPaused {
         // Emitir evento al iniciar el proceso de claim
         emit ClaimRequested(msg.sender);
         require(!hasClaimed[msg.sender], "Ya reclamaste tus tokens");
@@ -43,8 +45,17 @@ contract Faucet is AccessControl {
      * Solo puede ser llamada por una cuenta con el rol SETTER_ROLE.
      * @param newAmount El nuevo monto de reclamación en unidades de token (considerando decimales).
      */
+
     function setClaimAmount(uint256 newAmount) external onlyRole(SETTER_ROLE) {
         claimAmount = newAmount;
         emit ClaimAmountUpdated(newAmount);
     }
+    
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }    
 }

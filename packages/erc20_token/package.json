@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "output": "rm output.txt && node scripts/createoutput.js",
     "test": "npx hardhat test",
     "deploy-hardhat": "npx hardhat run scripts/deploy.js --network localhost",
     "copy-abis": "npx cpx 'artifacts/contracts/**/*.json' '../token_erc20_nextjs_faucet/src/app/abis'"

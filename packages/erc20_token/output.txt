@@ -5,11 +5,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./MyToken.sol";
+import "./PesosArgToken.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Faucet is AccessControl {
-    MyToken public token;
+    PesosArgToken public token;
     uint256 public claimAmount = 200 * 10 ** 6; // 200 MTK con 6 decimales
 
     mapping(address => bool) public hasClaimed;
@@ -24,7 +24,7 @@ contract Faucet is AccessControl {
 
     constructor(address tokenAddress) {
         require(tokenAddress != address(0), "Token address cannot be zero");
-        token = MyToken(tokenAddress);
+        token = PesosArgToken(tokenAddress);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(SETTER_ROLE, msg.sender);
     }
@@ -54,9 +54,9 @@ contract Faucet is AccessControl {
 
 ----------------------
 
-// contracts/MyToken.sol
+// contracts/PesosArgToken.sol
 
-// contracts/MyToken.sol
+// contracts/PesosArgToken.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
@@ -65,7 +65,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MyToken is ERC20, AccessControl, Ownable {
+contract PesosArgToken is ERC20, AccessControl, Ownable {
     // Definir un rol para los minters
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -73,7 +73,7 @@ contract MyToken is ERC20, AccessControl, Ownable {
     event BeforeMint(address indexed to, uint256 amount);
     event Mint(address indexed to, uint256 amount);
 
-    constructor() ERC20("M Token", "MTK") {
+    constructor() ERC20("Pesos Argentinos Divisa Mundial", "ARS") {
         // Otorgar el rol de admin al deployer del contrato
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -99,7 +99,7 @@ contract MyToken is ERC20, AccessControl, Ownable {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./MyToken.sol";
+import "./PesosArgToken.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract Staking is ReentrancyGuard {
@@ -108,7 +108,7 @@ contract Staking is ReentrancyGuard {
         uint256 since;
     }
 
-    MyToken public token;
+    PesosArgToken public token;
     mapping(address => StakeInfo) public stakes;
     uint256 public constant REWARD_RATE = 1; // 0.1% per minute (for testing purposes)
 
@@ -117,7 +117,7 @@ contract Staking is ReentrancyGuard {
 
     constructor(address _token) {
         require(_token != address(0), "Token address cannot be zero");
-        token = MyToken(_token);
+        token = PesosArgToken(_token);
     }
 
     function stake(uint256 _amount) external nonReentrant {
@@ -212,7 +212,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Faucet", function () {
-  let myToken;
+  let pesosArgToken;
   let faucet;
   let owner;
   let addr1;
@@ -220,21 +220,23 @@ describe("Faucet", function () {
   const CLAIM_AMOUNT = ethers.parseUnits("200", 6); // 200 tokens con 6 decimales
 
   async function deployContracts() {
-    const MyTokenFactory = await ethers.getContractFactory("MyToken");
-    console.log("Obtained MyToken contract factory");
+    const PesosArgTokenFactory = await ethers.getContractFactory(
+      "PesosArgToken"
+    );
+    console.log("Obtained PesosArgToken contract factory");
 
-    myToken = await MyTokenFactory.deploy();
-    console.log("MyToken deploy transaction sent");
+    pesosArgToken = await PesosArgTokenFactory.deploy();
+    console.log("PesosArgToken deploy transaction sent");
 
     // Esperar a que el contrato sea desplegado completamente
-    await myToken.waitForDeployment();
-    const myTokenAddress = await myToken.getAddress(); // ← Uso de getAddress()
-    console.log("MyToken desplegado en:", myTokenAddress);
+    await pesosArgToken.waitForDeployment();
+    const pesosArgTokenAddress = await pesosArgToken.getAddress(); // ← Uso de getAddress()
+    console.log("PesosArgToken desplegado en:", pesosArgTokenAddress);
 
     const FaucetFactory = await ethers.getContractFactory("Faucet");
     console.log("Obtained Faucet contract factory");
 
-    faucet = await FaucetFactory.deploy(myTokenAddress); // ← Aquí usamos myTokenAddress
+    faucet = await FaucetFactory.deploy(pesosArgTokenAddress); // ← Aquí usamos PesosArgTokenAddress
     console.log("Faucet deploy transaction sent");
 
     // Esperar a que el contrato sea desplegado completamente
@@ -242,8 +244,10 @@ describe("Faucet", function () {
     const faucetAddress = await faucet.getAddress(); // ← Uso de getAddress()
     console.log("Faucet desplegado en:", faucetAddress);
 
-    // Transferir propiedad de MyToken al Faucet
-    const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
+    // Transferir propiedad de PesosArgToken al Faucet
+    const transferOwnershipTx = await pesosArgToken.transferOwnership(
+      faucetAddress
+    );
     console.log("TransferOwnership transaction sent");
     await transferOwnershipTx.wait();
     console.log("TransferOwnership transaction confirmed");
@@ -253,7 +257,10 @@ describe("Faucet", function () {
     console.log("MINTER_ROLE hash:", MINTER_ROLE);
 
     // Otorgar MINTER_ROLE al Faucet
-    const grantRoleTx = await myToken.grantRole(MINTER_ROLE, faucetAddress);
+    const grantRoleTx = await pesosArgToken.grantRole(
+      MINTER_ROLE,
+      faucetAddress
+    );
     console.log("grantRole transaction sent");
     await grantRoleTx.wait();
     console.log("grantRole transaction confirmed");
@@ -267,8 +274,8 @@ describe("Faucet", function () {
   describe("Deployment", function () {
     it("Should set the correct token address", async function () {
       const tokenAddress = await faucet.token();
-      const myTokenAddress = await myToken.getAddress(); // Comparamos con el real address del contrato
-      expect(tokenAddress).to.equal(myTokenAddress);
+      const pesosArgTokenAddress = await pesosArgToken.getAddress(); // Comparamos con el real address del contrato
+      expect(tokenAddress).to.equal(pesosArgTokenAddress);
     });
 
     it("Should set the correct claim amount", async function () {
@@ -276,9 +283,9 @@ describe("Faucet", function () {
     });
 
     it("Should transfer token ownership to faucet", async function () {
-      const myTokenOwner = await myToken.owner();
+      const pesosArgTokenOwner = await pesosArgToken.owner();
       const faucetAddress = await faucet.getAddress();
-      expect(myTokenOwner).to.equal(faucetAddress);
+      expect(pesosArgTokenOwner).to.equal(faucetAddress);
     });
   });
 
@@ -291,12 +298,14 @@ describe("Faucet", function () {
         .withArgs(addr1.address)
         .and.to.emit(faucet, "TokensClaimed")
         .withArgs(addr1.address, CLAIM_AMOUNT)
-        .and.to.emit(myToken, "BeforeMint")
+        .and.to.emit(pesosArgToken, "BeforeMint")
         .withArgs(addr1.address, CLAIM_AMOUNT)
-        .and.to.emit(myToken, "Mint")
+        .and.to.emit(pesosArgToken, "Mint")
         .withArgs(addr1.address, CLAIM_AMOUNT);
 
-      expect(await myToken.balanceOf(addr1.address)).to.equal(CLAIM_AMOUNT);
+      expect(await pesosArgToken.balanceOf(addr1.address)).to.equal(
+        CLAIM_AMOUNT
+      );
     });
 
     it("Should prevent double claims", async function () {
@@ -348,12 +357,14 @@ describe("Faucet", function () {
       await expect(claimTx)
         .to.emit(faucet, "TokensClaimed")
         .withArgs(addr2.address, NEW_CLAIM_AMOUNT)
-        .and.to.emit(myToken, "BeforeMint")
+        .and.to.emit(pesosArgToken, "BeforeMint")
         .withArgs(addr2.address, NEW_CLAIM_AMOUNT)
-        .and.to.emit(myToken, "Mint")
+        .and.to.emit(pesosArgToken, "Mint")
         .withArgs(addr2.address, NEW_CLAIM_AMOUNT);
 
-      expect(await myToken.balanceOf(addr2.address)).to.equal(NEW_CLAIM_AMOUNT);
+      expect(await pesosArgToken.balanceOf(addr2.address)).to.equal(
+        NEW_CLAIM_AMOUNT
+      );
     });
   });
 });
@@ -368,7 +379,7 @@ const { ethers } = require("hardhat");
 const { parseUnits } = ethers;
 
 describe("Staking", function () {
-  let myToken;
+  let pesosArgToken;
   let stakingContract;
   let stakingAddress;
   let owner;
@@ -379,40 +390,40 @@ describe("Staking", function () {
     [owner, user] = await ethers.getSigners();
     stakeAmount = parseUnits("10", 6); // 10 tokens con 6 decimales
 
-    // Deploy MyToken contract
-    const MyToken = await ethers.getContractFactory("MyToken");
-    myToken = await MyToken.deploy();
-    await myToken.waitForDeployment();
-    const myTokenAddress = await myToken.getAddress();
+    // Deploy PesosArgToken contract
+    const PesosArgToken = await ethers.getContractFactory("PesosArgToken");
+    pesosArgToken = await PesosArgToken.deploy();
+    await pesosArgToken.waitForDeployment();
+    const pesosArgTokenAddress = await pesosArgToken.getAddress();
 
     // Otorgar MINTER_ROLE al owner
     const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
-    await myToken.grantRole(MINTER_ROLE, owner.address);
+    await pesosArgToken.grantRole(MINTER_ROLE, owner.address);
 
     // Deploy Staking contract
     const Staking = await ethers.getContractFactory("Staking");
-    stakingContract = await Staking.deploy(myTokenAddress);
+    stakingContract = await Staking.deploy(pesosArgTokenAddress);
     await stakingContract.waitForDeployment();
     stakingAddress = await stakingContract.getAddress();
 
     // Grant MINTER_ROLE to Staking contract
-    await myToken.grantRole(MINTER_ROLE, stakingAddress);
+    await pesosArgToken.grantRole(MINTER_ROLE, stakingAddress);
 
     // Mint tokens for testing - mint extra for rewards
     const initialMint = parseUnits("2000", 6);
-    await myToken.mint(owner.address, initialMint);
+    await pesosArgToken.mint(owner.address, initialMint);
 
     // Transfer tokens to user for testing
-    await myToken.transfer(user.address, stakeAmount);
+    await pesosArgToken.transfer(user.address, stakeAmount);
   });
 
   it("Should allow user to stake tokens", async function () {
     // Verify user has enough tokens
-    const userBalance = await myToken.balanceOf(user.address);
+    const userBalance = await pesosArgToken.balanceOf(user.address);
     expect(userBalance).to.be.gte(stakeAmount);
 
     // Approve tokens for staking contract
-    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await pesosArgToken.connect(user).approve(stakingAddress, stakeAmount);
 
     // Store initial stake balance
     const initialStakeBalance = await stakingContract.getStakeInfo(
@@ -433,7 +444,7 @@ describe("Staking", function () {
 
   it("Should allow user to unstake tokens fully", async function () {
     // Approve and stake tokens
-    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await pesosArgToken.connect(user).approve(stakingAddress, stakeAmount);
     await stakingContract.connect(user).stake(stakeAmount);
 
     // Advance time by 10 minutes
@@ -444,13 +455,13 @@ describe("Staking", function () {
     const fullReward = await stakingContract.calculateReward(user.address);
 
     // Store initial balance
-    const initialBalance = await myToken.balanceOf(user.address);
+    const initialBalance = await pesosArgToken.balanceOf(user.address);
 
     // Unstake the full amount
     await stakingContract.connect(user).unstake(stakeAmount);
 
     // Get final balance and calculate expected final balance
-    const finalBalance = await myToken.balanceOf(user.address);
+    const finalBalance = await pesosArgToken.balanceOf(user.address);
     const expectedFinalBalance = initialBalance + stakeAmount + fullReward;
 
     // Verify final balance with tolerance
@@ -464,7 +475,7 @@ describe("Staking", function () {
 
   it("Should allow partial unstaking with proportional rewards", async function () {
     // Approve and stake tokens
-    await myToken.connect(user).approve(stakingAddress, stakeAmount);
+    await pesosArgToken.connect(user).approve(stakingAddress, stakeAmount);
     await stakingContract.connect(user).stake(stakeAmount);
 
     // Advance time by 10 minutes to accumulate rewards
@@ -478,13 +489,13 @@ describe("Staking", function () {
     const partialReward = (totalReward * partialUnstakeAmount) / stakeAmount;
 
     // Store initial balance
-    const initialBalance = await myToken.balanceOf(user.address);
+    const initialBalance = await pesosArgToken.balanceOf(user.address);
 
     // Perform partial unstaking
     await stakingContract.connect(user).unstake(partialUnstakeAmount);
 
     // Get final balance after partial unstake
-    const finalBalance = await myToken.balanceOf(user.address);
+    const finalBalance = await pesosArgToken.balanceOf(user.address);
 
     // Calculate expected final balance
     const expectedFinalBalance =
@@ -520,30 +531,32 @@ async function main() {
 
   console.log("Desplegando contratos con la cuenta:", deployer.address);
 
-  // Desplegar MyToken
-  const MyToken = await hre.ethers.getContractFactory("MyToken");
-  console.log("Desplegando MyToken...");
-  const myToken = await MyToken.deploy();
-  await myToken.waitForDeployment(); // En ethers v6 se usa waitForDeployment()
-  const myTokenAddress = await myToken.getAddress();
-  console.log("MyToken desplegado en:", myTokenAddress);
+  // Desplegar PesosArgToken
+  const PesosArgToken = await hre.ethers.getContractFactory("PesosArgToken");
+  console.log("Desplegando PesosArgToken...");
+  const pesosArgToken = await PesosArgToken.deploy();
+  await pesosArgToken.waitForDeployment(); // En ethers v6 se usa waitForDeployment()
+  const pesosArgTokenAddress = await pesosArgToken.getAddress();
+  console.log("PesosArgToken desplegado en:", pesosArgTokenAddress);
 
-  // Verificar la existencia del contrato MyToken en la blockchain
-  const myTokenCode = await hre.ethers.provider.getCode(myTokenAddress);
-  if (myTokenCode === "0x") {
+  // Verificar la existencia del contrato PesosArgToken en la blockchain
+  const pesosArgTokenCode = await hre.ethers.provider.getCode(
+    pesosArgTokenAddress
+  );
+  if (pesosArgTokenCode === "0x") {
     console.error(
-      "Error: No existe un contrato MyToken en la dirección:",
-      myTokenAddress
+      "Error: No existe un contrato PesosArgToken en la dirección:",
+      pesosArgTokenAddress
     );
     return;
   } else {
-    console.log("Contrato MyToken verificado en la blockchain.");
+    console.log("Contrato PesosArgToken verificado en la blockchain.");
   }
 
-  // Desplegar Faucet pasando la dirección de MyToken
+  // Desplegar Faucet pasando la dirección de PesosArgToken
   const Faucet = await hre.ethers.getContractFactory("Faucet");
   console.log("Desplegando Faucet...");
-  const faucet = await Faucet.deploy(myTokenAddress);
+  const faucet = await Faucet.deploy(pesosArgTokenAddress);
   await faucet.waitForDeployment();
   const faucetAddress = await faucet.getAddress();
   console.log("Faucet desplegado en:", faucetAddress);
@@ -560,10 +573,10 @@ async function main() {
     console.log("Contrato Faucet verificado en la blockchain.");
   }
 
-  // Desplegar Staking pasando la dirección de MyToken
+  // Desplegar Staking pasando la dirección de PesosArgToken
   const Staking = await hre.ethers.getContractFactory("Staking");
   console.log("Desplegando Staking...");
-  const staking = await Staking.deploy(myTokenAddress);
+  const staking = await Staking.deploy(pesosArgTokenAddress);
   await staking.waitForDeployment();
   const stakingAddress = await staking.getAddress();
   console.log("Staking desplegado en:", stakingAddress);
@@ -580,11 +593,13 @@ async function main() {
     console.log("Contrato Staking verificado en la blockchain.");
   }
 
-  // Transferir la propiedad de MyToken al Faucet
-  console.log("Transfiriendo propiedad de MyToken al Faucet...");
-  const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
+  // Transferir la propiedad de PesosArgToken al Faucet
+  console.log("Transfiriendo propiedad de PesosArgToken al Faucet...");
+  const transferOwnershipTx = await pesosArgToken.transferOwnership(
+    faucetAddress
+  );
   await transferOwnershipTx.wait();
-  console.log("Propiedad de MyToken transferida al Faucet.");
+  console.log("Propiedad de PesosArgToken transferida al Faucet.");
 
   // Definir el hash del rol MINTER_ROLE
   const MINTER_ROLE = hre.ethers.keccak256(
@@ -593,7 +608,7 @@ async function main() {
 
   // Otorgar el rol de MINTER_ROLE al contrato de Staking
   console.log("Otorgando MINTER_ROLE al contrato de Staking...");
-  const grantRoleStakingTx = await myToken.grantRole(
+  const grantRoleStakingTx = await pesosArgToken.grantRole(
     MINTER_ROLE,
     stakingAddress
   );
@@ -602,7 +617,10 @@ async function main() {
 
   // Otorgar el rol de MINTER_ROLE al contrato Faucet
   console.log("Otorgando MINTER_ROLE al contrato Faucet...");
-  const grantRoleFaucetTx = await myToken.grantRole(MINTER_ROLE, faucetAddress);
+  const grantRoleFaucetTx = await pesosArgToken.grantRole(
+    MINTER_ROLE,
+    faucetAddress
+  );
   await grantRoleFaucetTx.wait();
   console.log("MINTER_ROLE otorgado al contrato Faucet.");
 
@@ -623,7 +641,7 @@ async function main() {
   // Copiar los archivos específicos al directorio abis
   const artifactsPath = path.join(__dirname, "../artifacts");
   const destinationPath = path.join(__dirname, "../../abis");
-  const filesToCopy = ["Faucet.json", "MyToken.json", "Staking.json"];
+  const filesToCopy = ["Faucet.json", "PesosArgToken.json", "Staking.json"];
 
   console.log("Copiando archivos específicos desde artifacts a abis...");
   copySpecificJsonFiles(artifactsPath, destinationPath, filesToCopy);
@@ -674,15 +692,15 @@ async function main() {
   console.log(`Signer (owner): ${owner.address}`);
 
   // Verificar si la dirección del contrato es correcta
-  const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Reemplaza con la dirección de tu contrato MyToken
-  console.log(`Dirección del contrato MyToken: ${tokenAddress}`);
+  const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Reemplaza con la dirección de tu contrato PesosArgToken
+  console.log(`Dirección del contrato PesosArgToken: ${tokenAddress}`);
 
   const tokenABI = [
     "function balanceOf(address account) view returns (uint256)",
   ];
 
   // Crear una instancia del contrato con ethers
-  console.log("Creando la instancia del contrato MyToken...");
+  console.log("Creando la instancia del contrato PesosArgToken...");
   const tokenContract = new hre.ethers.Contract(tokenAddress, tokenABI, owner);
 
   // Intentar obtener el balance
@@ -691,7 +709,10 @@ async function main() {
     const balance = await tokenContract.balanceOf(owner.address);
     console.log(`Balance obtenido: ${balance.toString()}`);
     console.log(
-      `Balance de MyToken: ${hre.ethers.utils.formatUnits(balance, 18)} tokens`
+      `Balance de PesosArgToken: ${hre.ethers.utils.formatUnits(
+        balance,
+        18
+      )} tokens`
     );
   } catch (error) {
     console.error("Error al obtener el balance:", error);
@@ -832,6 +853,7 @@ module.exports = {
   "description": "",
   "main": "index.js",
   "scripts": {
+    "output": "rm output.txt && node scripts/createoutput.js",
     "test": "npx hardhat test",
     "deploy-hardhat": "npx hardhat run scripts/deploy.js --network localhost",
     "copy-abis": "npx cpx 'artifacts/contracts/**/*.json' '../token_erc20_nextjs_faucet/src/app/abis'"

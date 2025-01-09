@@ -5,14 +5,13 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract PesosArgToken is ERC20, AccessControl, Ownable {
+
+contract PesosArgToken is ERC20, AccessControl {
     // Definir un rol para los minters
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     // Eventos
-    event BeforeMint(address indexed to, uint256 amount);
     event Mint(address indexed to, uint256 amount);
 
     constructor() ERC20("Pesos Argentinos Divisa Mundial", "ARS") {
@@ -27,7 +26,6 @@ contract PesosArgToken is ERC20, AccessControl, Ownable {
 
     // Función para mintear tokens, solo callable por cuentas con el rol MINTER_ROLE
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
-        emit BeforeMint(to, amount);
         _mint(to, amount);
         emit Mint(to, amount);
     }
