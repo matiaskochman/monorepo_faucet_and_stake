@@ -13,30 +13,32 @@ async function main() {
 
   console.log("Desplegando contratos con la cuenta:", deployer.address);
 
-  // Desplegar MyToken
-  const MyToken = await hre.ethers.getContractFactory("MyToken");
-  console.log("Desplegando MyToken...");
-  const myToken = await MyToken.deploy();
-  await myToken.waitForDeployment(); // En ethers v6 se usa waitForDeployment()
-  const myTokenAddress = await myToken.getAddress();
-  console.log("MyToken desplegado en:", myTokenAddress);
+  // Desplegar PesosArgToken
+  const PesosArgToken = await hre.ethers.getContractFactory("PesosArgToken");
+  console.log("Desplegando PesosArgToken...");
+  const pesosArgToken = await PesosArgToken.deploy();
+  await pesosArgToken.waitForDeployment(); // En ethers v6 se usa waitForDeployment()
+  const pesosArgTokenAddress = await pesosArgToken.getAddress();
+  console.log("PesosArgToken desplegado en:", pesosArgTokenAddress);
 
-  // Verificar la existencia del contrato MyToken en la blockchain
-  const myTokenCode = await hre.ethers.provider.getCode(myTokenAddress);
-  if (myTokenCode === "0x") {
+  // Verificar la existencia del contrato PesosArgToken en la blockchain
+  const pesosArgTokenCode = await hre.ethers.provider.getCode(
+    pesosArgTokenAddress
+  );
+  if (pesosArgTokenCode === "0x") {
     console.error(
-      "Error: No existe un contrato MyToken en la dirección:",
-      myTokenAddress
+      "Error: No existe un contrato PesosArgToken en la dirección:",
+      pesosArgTokenAddress
     );
     return;
   } else {
-    console.log("Contrato MyToken verificado en la blockchain.");
+    console.log("Contrato PesosArgToken verificado en la blockchain.");
   }
 
-  // Desplegar Faucet pasando la dirección de MyToken
+  // Desplegar Faucet pasando la dirección de PesosArgToken
   const Faucet = await hre.ethers.getContractFactory("Faucet");
   console.log("Desplegando Faucet...");
-  const faucet = await Faucet.deploy(myTokenAddress);
+  const faucet = await Faucet.deploy(pesosArgTokenAddress);
   await faucet.waitForDeployment();
   const faucetAddress = await faucet.getAddress();
   console.log("Faucet desplegado en:", faucetAddress);
@@ -53,10 +55,10 @@ async function main() {
     console.log("Contrato Faucet verificado en la blockchain.");
   }
 
-  // Desplegar Staking pasando la dirección de MyToken
+  // Desplegar Staking pasando la dirección de PesosArgToken
   const Staking = await hre.ethers.getContractFactory("Staking");
   console.log("Desplegando Staking...");
-  const staking = await Staking.deploy(myTokenAddress);
+  const staking = await Staking.deploy(pesosArgTokenAddress);
   await staking.waitForDeployment();
   const stakingAddress = await staking.getAddress();
   console.log("Staking desplegado en:", stakingAddress);
@@ -73,11 +75,13 @@ async function main() {
     console.log("Contrato Staking verificado en la blockchain.");
   }
 
-  // Transferir la propiedad de MyToken al Faucet
-  console.log("Transfiriendo propiedad de MyToken al Faucet...");
-  const transferOwnershipTx = await myToken.transferOwnership(faucetAddress);
+  // Transferir la propiedad de PesosArgToken al Faucet
+  console.log("Transfiriendo propiedad de PesosArgToken al Faucet...");
+  const transferOwnershipTx = await pesosArgToken.transferOwnership(
+    faucetAddress
+  );
   await transferOwnershipTx.wait();
-  console.log("Propiedad de MyToken transferida al Faucet.");
+  console.log("Propiedad de PesosArgToken transferida al Faucet.");
 
   // Definir el hash del rol MINTER_ROLE
   const MINTER_ROLE = hre.ethers.keccak256(
@@ -86,7 +90,7 @@ async function main() {
 
   // Otorgar el rol de MINTER_ROLE al contrato de Staking
   console.log("Otorgando MINTER_ROLE al contrato de Staking...");
-  const grantRoleStakingTx = await myToken.grantRole(
+  const grantRoleStakingTx = await pesosArgToken.grantRole(
     MINTER_ROLE,
     stakingAddress
   );
@@ -95,7 +99,10 @@ async function main() {
 
   // Otorgar el rol de MINTER_ROLE al contrato Faucet
   console.log("Otorgando MINTER_ROLE al contrato Faucet...");
-  const grantRoleFaucetTx = await myToken.grantRole(MINTER_ROLE, faucetAddress);
+  const grantRoleFaucetTx = await pesosArgToken.grantRole(
+    MINTER_ROLE,
+    faucetAddress
+  );
   await grantRoleFaucetTx.wait();
   console.log("MINTER_ROLE otorgado al contrato Faucet.");
 
@@ -116,7 +123,7 @@ async function main() {
   // Copiar los archivos específicos al directorio abis
   const artifactsPath = path.join(__dirname, "../artifacts");
   const destinationPath = path.join(__dirname, "../../abis");
-  const filesToCopy = ["Faucet.json", "MyToken.json", "Staking.json"];
+  const filesToCopy = ["Faucet.json", "PesosArgToken.json", "Staking.json"];
 
   console.log("Copiando archivos específicos desde artifacts a abis...");
   copySpecificJsonFiles(artifactsPath, destinationPath, filesToCopy);

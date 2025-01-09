@@ -1,4 +1,4 @@
 Desplegando contratos con la cuenta: 0x432Bcf17BC6F3c298a624fEcfdb608c3cacd121d
-MyToken desplegado en: 0x539383726418f2F903dFa775f9D3D25AeE7E602A
+PesosArgToken desplegado en: 0x539383726418f2F903dFa775f9D3D25AeE7E602A
 Faucet desplegado en: 0xD233A182c5A89280457a68B23C761AaE9fe3D765
 Staking desplegado en: 0xbCB840cAf1B87eA5BFb4e416Bd9818Fa0Ff8C8b1
