@@ -9,7 +9,7 @@ describe("Faucet", function () {
   let owner;
   let addr1;
   let addr2;
-  const CLAIM_AMOUNT = ethers.parseUnits("200", 6); // 200 tokens con 6 decimales
+  const CLAIM_AMOUNT = ethers.parseUnits("100", 6);
 
   async function deployContracts() {
     const PesosArgTokenFactory = await ethers.getContractFactory(

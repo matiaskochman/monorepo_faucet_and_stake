@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract Faucet is AccessControl, ReentrancyGuard, Pausable {
     PesosArgToken public token;
-    uint256 public claimAmount = 200 * 10 ** 6; // 200 MTK con 6 decimales
+    uint256 public claimAmount = 100 * 10 ** 6;
 
     mapping(address => bool) public hasClaimed;
 
