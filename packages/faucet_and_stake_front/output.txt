@@ -72,295 +72,11 @@ export function WalletOptions() {
 }
 
 
-"use client";
-import { useState, useEffect } from "react";
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  useReadContract,
-  useWriteContract,
-} from "wagmi";
-import {
-  // connectWallet,
-  fetchTokenBalance,
-  claimTokens,
-  stakeTokens,
-  unstakeTokens,
-  logout,
-} from "@/utils/web3Utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
-import { ethers } from "ethers";
-// import Web3Modal from "web3modal";
-import {
-  ERC20_ADDRESS,
-  STAKING_ADDRESS,
-  FAUCET_ADDRESS,
-  targetChainId,
-} from "../config";
-
-console.log("ERC20_ADDRESS:", ERC20_ADDRESS);
-console.log("STAKING_ADDRESS:", STAKING_ADDRESS);
-console.log("FAUCET_ADDRESS:", FAUCET_ADDRESS);
-
-export default function Web3TokenDashboard() {
-  const [balance, setBalance] = useState<number>(0);
-  const [stakedAmount, setStakedAmount] = useState<number>(0);
-  const [stakingStart, setStakingStart] = useState<Date | null>(null);
-  const [stakingRewards, setStakingRewards] = useState(0);
-  const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [currentChainId, setCurrentChainId] = useState<bigint | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  // const [account, setAccount] = useState<string | null>(null);
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
-  const [stakeAmount, setStakeAmount] = useState<number>(0);
-  const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
-
-  const account = useAccount();
-  const { connectors, connect, status, error } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { data: hash, writeContract } = useWriteContract();
-
-
-  const handleClaimtokens = async () => {
-    setLoading(true);
-    // await claimTokens(signer, provider, setLoading, setError, setTxHash);
-    await claimTokens(signer, provider, setLoading, setError, setTxHash);
-    if (provider && signer && account) {
-      await fetchTokenBalance(signer, account, setBalance, setError);
-    }
-    setLoading(false);
-  };
-
-
-
-  const handleUnstake = async () => {
-    await unstakeTokens(
-      signer,
-      provider,
-      unstakeAmount,
-      setLoading,
-      setError,
-      setTxHash,
-      setStakedAmount,
-      setStakingStart,
-      setStakingRewards
-    );
-    if (provider && signer && account) {
-      await fetchTokenBalance(signer, account, setBalance, setError);
-    }
-  };
-
-  const handleStake = async () => {
-    await stakeTokens(
-      signer,
-      provider,
-      stakeAmount,
-      setLoading,
-      setError,
-      setTxHash,
-      setStakedAmount,
-      setStakingStart
-    );
-    if (provider && signer && account) {
-      await fetchTokenBalance(signer, account, setBalance, setError);
-    }
-  };
-
-  const handleLogout = async () => {
-    logout(
-      setAccount,
-      setProvider,
-      setSigner,
-      setIsConnected,
-      setBalance,
-      setStakedAmount,
-      setStakingStart,
-      setStakingRewards,
-      setCurrentChainId,
-      setError,
-      setTxHash
-    );
-  };
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="max-w-[39rem]">
-        <CardHeader>
-          <CardTitle>Web3 Token Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!isConnected ? (
-            connectors.map((connector) => (
-              <button
-                key={connector.uid}
-                onClick={() => connect({ connector })}
-                type="button"
-              >
-                {connector.name}
-              </button>
-            ))
-          ) : (
-            <>
-              <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between">
-                  <span>Contrato ERC20:</span>
-                  <span className="font-mono">{ERC20_ADDRESS}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Contrato Staking:</span>
-                  <span className="font-mono">{STAKING_ADDRESS}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Contrato Faucet:</span>
-                  <span className="font-mono">{FAUCET_ADDRESS}</span>
-                </div>
-              </div>
-              <br></br>
-              <br></br>
-              <div>
-                status: {account.status}
-                <br />
-                addresses: {JSON.stringify(account.addresses)}
-                <br />
-                chainId: {account.chainId}
-              </div>
-              <div className="flex justify-between">
-                <span>Cuenta:</span>
-                <span className="font-bold">{account}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Balance:</span>
-                <span className="font-bold">{balance.toFixed(2)} tokens</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Staked Amount:</span>
-                <span className="font-bold">
-                  {stakedAmount !== undefined && !isNaN(stakedAmount)
-                    ? stakedAmount.toFixed(2)
-                    : "0.00"}{" "}
-                  tokens
-                </span>
-              </div>
-              {stakingStart && (
-                <div className="flex justify-between">
-                  <span>Staking Time:</span>
-                  <span className="font-bold">
-                    {formatDistanceToNow(stakingStart)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span>Staking Rewards:</span>
-                <span className="font-bold">
-                  {stakingRewards.toFixed(2)} tokens
-                </span>
-              </div>
-              <div className="flex flex-col space-y-2">
-                <Button
-                  onClick={handleClaimtokens}
-                  disabled={loading || currentChainId !== BigInt(targetChainId)}
-                >
-                  {loading ? "Reclamando..." : "Claim Tokens"}
-                </Button>
-                <input
-                  type="number"
-                  value={stakeAmount}
-                  onChange={(e) => setStakeAmount(Number(e.target.value))}
-                  placeholder="Cantidad de tokens para stake"
-                  className="w-full p-2 border rounded"
-                />
-                <Button
-                  onClick={handleStake}
-                  disabled={loading || currentChainId !== BigInt(targetChainId)}
-                >
-                  {loading
-                    ? "Haciendo Stake..."
-                    : `Stake ${stakeAmount} Tokens`}
-                </Button>
-                <input
-                  type="number"
-                  value={unstakeAmount}
-                  onChange={(e) => setUnstakeAmount(Number(e.target.value))}
-                  placeholder="Cantidad de tokens para unstake"
-                  className="w-full p-2 border rounded"
-                />
-                <Button
-                  onClick={handleUnstake}
-                  disabled={loading || currentChainId !== BigInt(targetChainId)}
-                >
-                  {loading
-                    ? "Haciendo Unstake..."
-                    : `Unstake ${unstakeAmount} Tokens`}
-                </Button>
-                <Button
-                  onClick={handleLogout}
-                  disabled={loading}
-                  className="w-full mt-2 bg-red-500 hover:bg-red-600 text-white"
-                >
-                  {loading ? "Desconectando..." : "Logout"}
-                </Button>
-              </div>
-            </>
-          )}
-          {/* {txHash && (
-            <div className="p-3 bg-green-100 rounded">
-              <p className="text-green-800">
-                Transacción enviada:{" "}
-                <a
-                  href={`https://etherscan.io/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline break-all"
-                >
-                  {txHash}
-                </a>
-              </p>
-            </div>
-          )} */}
-          {error && (
-            <p className="text-red-500" role="alert">
-              {error}
-            </p>
-          )}
-          {currentChainId !== BigInt(targetChainId) && (
-            <p className="text-orange-500" role="alert">
-              Cambia a la red de Hardhat para reclamar los tokens.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-async function fetchStakedAmount(
-  address: string,
-  signer: ethers.JsonRpcSigner,
-  setError: (msg: string) => void
-): Promise<number> {
-  try {
-    const { fetchStakedAmount: originalFetch } = await import(
-      "@/utils/web3Utils"
-    );
-    return await originalFetch(address, signer, setError);
-  } catch (err) {
-    console.error("Error al obtener el monto staked:", err);
-    setError("No se pudo obtener el monto staked.");
-    return 0;
-  }
-}
-
-
+// Path: src/app/page.tsx
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -368,28 +84,67 @@ import {
   Card,
   CardContent,
   CardHeader,
-  TextField,
   Divider,
-  CircularProgress,
 } from "@mui/material";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useReadContract } from "wagmi";
 import TokenBalance from "@/components/ui/TokenBalance";
 import ClaimTokens from "@/components/ui/ClaimTokens";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
-
 import { StakingComponent } from "@/components/ui/Staking";
+import tokenAbi from "../../../abis/MyToken.json";
+import stakingAbi from "../../../abis/Staking.json";
 
 export default function Web3TokenDashboard() {
-  const [stakeAmount, setStakeAmount] = useState<number>(0);
-  const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Agregado para manejar errores
-
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
   const account = useAccount();
-
   const contractAddresses = useContractAddresses();
+  // const [getTokenBalance, setTokenBalance] = useState<string>("");
+  const [getAddress, setAddress] = useState<`0x${string}` | undefined>("0x0");
+  // const [getERC20ContractAddress, setERC20ContractAddress] = useState<
+  //   `0x${string}` | undefined
+  // >("0x0");
+
+  const {
+    data: tokenBalanceValue,
+    error: tokenBalanceError,
+    isLoading: tokenBalanceLoading,
+    refetch: refetchTokenBalance,
+  } = useReadContract({
+    abi: tokenAbi.abi,
+    address: contractAddresses.ERC20_ADDRESS,
+    functionName: "balanceOf",
+    args: [getAddress],
+    enabled: account.isConnected, // Solo habilitar la consulta si está conectado
+    // watch: true, // Habilita la actualización en tiempo real
+  });
+
+  const {
+    data: stakedData,
+    error: stakedDataError,
+    isLoading: stakedAmountLoading,
+    refetch: refetchStakedAmount,
+  } = useReadContract({
+    address: contractAddresses.STAKING_ADDRESS,
+    abi: stakingAbi.abi, // ¡IMPORTANTE!
+    functionName: "getStakedAmount",
+    args: [getAddress], // Manejo de undefined para el argumento
+    // enabled: !!stakingAddress,
+    // watch: true,
+  });
+
+  useEffect(() => {
+    setAddress(account.address);
+    refetchTokenBalance();
+    refetchStakedAmount();
+  }, [
+    account.address,
+    account.chainId,
+    tokenBalanceValue,
+    stakedData,
+    refetchTokenBalance,
+    refetchStakedAmount,
+  ]);
 
   // Manejar la conexión y desconexión
   const handleConnect = (connectorId: string) => {
@@ -422,6 +177,10 @@ export default function Web3TokenDashboard() {
     );
   }
 
+  if (!!contractAddresses && !!account.isConnected) {
+    console.log("aqui");
+    console.log(account.chainId);
+  }
   return (
     <Box
       sx={{
@@ -512,102 +271,31 @@ export default function Web3TokenDashboard() {
           {/* Componente ClaimTokens */}
           {account.isConnected && contractAddresses && (
             <Box sx={{ mt: 2 }}>
-              <ClaimTokens contractAddress={contractAddresses.FAUCET_ADDRESS} />
+              <ClaimTokens
+                contractAddress={contractAddresses.FAUCET_ADDRESS}
+                refetchTokenBalance={refetchTokenBalance}
+                refetchStakedBalance={refetchStakedAmount}
+              />
             </Box>
           )}
 
           {/* Componente TokenBalance */}
           {account.isConnected && contractAddresses && (
             <Box sx={{ mt: 2 }}>
-              <TokenBalance
-                address={account.address}
-                contractAddress={contractAddresses.ERC20_ADDRESS}
-              />
+              <TokenBalance balance={tokenBalanceValue as bigint} />
             </Box>
           )}
 
           {/* Acciones de staking */}
 
-          <StakingComponent />
-
-
-          {/* {account.isConnected && contractAddresses && (
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6">Acciones de Staking</Typography>
-              <Divider sx={{ my: 2 }} />
-              <TextField
-                label="Cantidad para Stake"
-                type="number"
-                value={stakeAmount}
-                onChange={(e) => setStakeAmount(Number(e.target.value))}
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={async () => {
-                  setLoading(true);
-                  // Aquí deberías llamar a tu función para hacer stake de tokens
-                  // Por ejemplo: await handleStake()
-                  // Asegúrate de implementar la lógica de staking correctamente
-                  try {
-                    // Implementa la lógica real de staking aquí
-                    // Por ejemplo:
-                    // await stakeTokens(...)
-                  } catch (err) {
-                    setError("Error al hacer stake de tokens.");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                fullWidth
-              >
-                {loading ? <CircularProgress size={24} /> : `Stake Tokens`}
-              </Button>
-
-              <TextField
-                label="Cantidad para Unstake"
-                type="number"
-                value={unstakeAmount}
-                onChange={(e) => setUnstakeAmount(Number(e.target.value))}
-                fullWidth
-                sx={{ mt: 2 }}
-              />
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={async () => {
-                  setLoading(true);
-                  // Aquí deberías llamar a tu función para hacer unstake de tokens
-                  // Por ejemplo: await handleUnstake()
-                  // Asegúrate de implementar la lógica de unstaking correctamente
-                  try {
-                    // Implementa la lógica real de unstaking aquí
-                    // Por ejemplo:
-                    // await unstakeTokens(...)
-                  } catch (err) {
-                    setError("Error al hacer unstake de tokens.");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                fullWidth
-                sx={{ mt: 2 }}
-              >
-                {loading ? <CircularProgress size={24} /> : `Unstake Tokens`}
-              </Button>
-
-              {/* Mostrar errores si existen */}
-              {error && (
-                <Typography color="error" sx={{ mt: 2 }}>
-                  {error}
-                </Typography>
-              )}
-            </Box>
-          )} */}
+          {account.isConnected && contractAddresses && (
+            <StakingComponent
+              stakedAmount={stakedData as bigint}
+              tokenBalance={tokenBalanceValue as bigint}
+              refetchTokenBalance={refetchTokenBalance}
+              refetchStakedBalance={refetchStakedAmount}
+            />
+          )}
         </CardContent>
       </Card>
     </Box>
@@ -767,27 +455,47 @@ export function Providers(props: {
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button"; // Asegúrate de importar tu componente de botón correctamente
 import { useWriteContract } from "wagmi";
-// import { FAUCET_ADDRESS } from "@/config";
 import faucetAbi from "../../../../abis/Faucet.json";
+// import { FAUCET_ADDRESS } from "@/config";
 // const contractAddress: `0x${string}` = FAUCET_ADDRESS as `0x${string}`;
 
-const ClaimTokens = ({
+interface ClaimTokensProps {
+  contractAddress: `0x${string}`;
+  refetchTokenBalance: () => void;
+  refetchStakedBalance: () => void;
+}
+
+const ClaimTokens: React.FC<ClaimTokensProps> = ({
   contractAddress,
+  refetchTokenBalance,
+  refetchStakedBalance,
 }: {
   contractAddress: `0x${string}`;
 }) => {
   const [loading, setLoading] = useState(false);
-  const { data: hash, writeContract } = useWriteContract();
+  const { data: hash, writeContractAsync, writeContract } = useWriteContract();
 
   const handleClaimTokens = async () => {
     setLoading(true);
     try {
-      writeContract({
+      // writeContract({
+      //   address: contractAddress,
+      //   abi: faucetAbi.abi,
+      //   functionName: "claimTokens",
+      //   args: [],
+      //   type: "eip1559",
+      // });
+
+      const tx = await writeContractAsync({
         address: contractAddress,
         abi: faucetAbi.abi,
         functionName: "claimTokens",
-        // args: [BigInt(tokenId)],
+        args: [],
+        type: "eip1559",
       });
+      console.log(tx);
+      refetchTokenBalance();
+      refetchStakedBalance();
     } catch (error) {
       console.error("Error al reclamar tokens", error);
     } finally {
@@ -807,7 +515,8 @@ export default ClaimTokens;
 
 // Path: src/components/ui/Staking.tsx
 
-import React, { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -815,39 +524,133 @@ import {
   Button,
   Box,
   Typography,
-  CircularProgress,
+  // CircularProgress,
 } from "@mui/material";
-import { useStaking } from "../../hooks/useStake";
+import { ethers } from "ethers";
+// import { useStaking } from "../../hooks/useStake";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import tokenAbi from "../../../../abis/MyToken.json";
+import stakingAbi from "../../../../abis/Staking.json";
 
-export const StakingComponent = () => {
-  const [stakeAmount, setStakeAmount] = useState("");
-  const [unstakeAmount, setUnstakeAmount] = useState("");
+interface StakingComponentProps {
+  stakedAmount: bigint;
+  tokenBalance: bigint;
+  refetchTokenBalance: () => void;
+  refetchStakedBalance: () => void;
+}
 
+export const StakingComponent: React.FC<StakingComponentProps> = ({
+  stakedAmount,
+  tokenBalance,
+  refetchTokenBalance,
+  refetchStakedBalance,
+}) => {
+  const [error, setError] = useState<string | null>(null);
+  const [stakeAmount, setStakeAmount] = useState<number>(0);
+  const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
   const contractAddresses = useContractAddresses();
 
-  const { stake, unstake, isWaitingForApproval, approvalHash, stakeHash } =
-    useStaking(
-      contractAddresses?.STAKING_ADDRESS,
-      contractAddresses?.ERC20_ADDRESS
-    );
+  const {
+    writeContractAsync: writeAllowance,
+    // data: approvalHash,
+    // isPending: isAllowancePending,
+  } = useWriteContract();
+  // const {
+  //   writeContractAsync: writeStaking,
+  //   data: stakeHash,
+  //   isPending: isStakingPending,
+  //   // isSuccess: isStakedSuccess,
+  // } = useWriteContract();
+
+  const {
+    data: hash,
+    // error,
+    isPending: isStakingPending,
+    writeContract: writeStaking,
+  } = useWriteContract();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+  useEffect(() => {
+    refetchStakedBalance();
+    refetchTokenBalance();
+    setStakeAmount(0);
+    setUnstakeAmount(0);
+  }, [isConfirmed, refetchStakedBalance, refetchTokenBalance]);
+
+  const stakingAddress = contractAddresses?.STAKING_ADDRESS;
+  const tokenAddress = contractAddresses?.ERC20_ADDRESS;
+
+  let displayStakedBalance = "0"; // Default display value
+
+  if (stakedAmount != null) {
+    // Check for both null and undefined
+    try {
+      displayStakedBalance = ethers.formatUnits(stakedAmount, 6);
+    } catch (error) {
+      console.error("Error formatting balance:", error);
+      displayStakedBalance = "Error"; // Display an error message
+    }
+  }
 
   const handleStake = async () => {
     if (!stakeAmount) return;
-    await stake(stakeAmount);
-    setStakeAmount("");
+
+    // Compara allowance con parsedAmount como bigints
+    const amountInTokens = ethers.parseUnits(stakeAmount.toString(), 6);
+    if (tokenBalance > Number(amountInTokens)) {
+      await writeAllowance({
+        address: tokenAddress,
+        abi: tokenAbi.abi,
+        functionName: "approve",
+        args: [stakingAddress, amountInTokens],
+      });
+
+      await writeStaking({
+        address: stakingAddress,
+        abi: stakingAbi.abi,
+        functionName: "stake",
+        args: [amountInTokens],
+      });
+      setError(null);
+    } else {
+      setStakeAmount(0);
+      setUnstakeAmount(0);
+      setError("not enogh token balance");
+    }
   };
 
   const handleUnstake = async () => {
     if (!unstakeAmount) return;
-    await unstake(unstakeAmount);
-    setUnstakeAmount("");
+    const amountInTokens = ethers.parseUnits(unstakeAmount.toString(), 6);
+
+    if (stakedAmount > Number(amountInTokens)) {
+      await writeStaking({
+        address: stakingAddress,
+        abi: stakingAbi.abi,
+        functionName: "unstake",
+        args: [amountInTokens],
+        type: "eip1559",
+      });
+      setError(null);
+    } else {
+      setStakeAmount(0);
+      setUnstakeAmount(0);
+      setError("staked balance not enogh");
+    }
   };
 
   return (
     <Card sx={{ maxWidth: 400, margin: "auto", mt: 4 }}>
       <CardContent>
         <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Staked Amount:{" "}
+            {displayStakedBalance ? displayStakedBalance.toString() : "0"}
+          </Typography>
           <Typography variant="h6" sx={{ mb: 2 }}>
             Stake
           </Typography>
@@ -855,7 +658,7 @@ export const StakingComponent = () => {
             fullWidth
             type="number"
             value={stakeAmount}
-            onChange={(e) => setStakeAmount(e.target.value)}
+            onChange={(e) => setStakeAmount(Number(e.target.value))}
             placeholder="Amount to stake"
             InputProps={{
               inputProps: { min: 0, step: "0.000000000000000001" },
@@ -866,13 +669,9 @@ export const StakingComponent = () => {
             fullWidth
             variant="contained"
             onClick={handleStake}
-            disabled={!stakeAmount || isWaitingForApproval}
+            // disabled={!stakeAmount}
           >
-            {isWaitingForApproval ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "Stake"
-            )}
+            Stake
           </Button>
         </Box>
 
@@ -884,7 +683,7 @@ export const StakingComponent = () => {
             fullWidth
             type="number"
             value={unstakeAmount}
-            onChange={(e) => setUnstakeAmount(e.target.value)}
+            onChange={(e) => setUnstakeAmount(Number(e.target.value))}
             placeholder="Amount to unstake"
             InputProps={{
               inputProps: { min: 0, step: "0.000000000000000001" },
@@ -895,22 +694,20 @@ export const StakingComponent = () => {
             fullWidth
             variant="contained"
             onClick={handleUnstake}
-            disabled={!unstakeAmount}
+            // disabled={!unstakeAmount}
             color="secondary"
           >
             Unstake
           </Button>
         </Box>
-
-        {(approvalHash || stakeHash) && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
-              {approvalHash && `Approval TX: ${approvalHash}`}
-              {stakeHash && `Stake TX: ${stakeHash}`}
-            </Typography>
-          </Box>
-        )}
       </CardContent>
+      {error && (
+        <Box sx={{ marginTop: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        </Box>
+      )}
     </Card>
   );
 };
@@ -920,65 +717,29 @@ export const StakingComponent = () => {
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { CircularProgress, Typography } from "@mui/material";
-import { useReadContract, useAccount, useChainId } from "wagmi";
+import React from "react";
+import { Typography } from "@mui/material";
 import { ethers } from "ethers";
-import tokenAbi from "../../../../abis/MyToken.json";
-// import { ERC20_ADDRESS } from "@/config";
 
 interface TokenBalanceProps {
-  address?: `0x${string}`;
-  contractAddress: `0x${string}`;
+  balance: bigint;
 }
 
-const TokenBalance: React.FC<TokenBalanceProps> = ({
-  address,
-  contractAddress,
-}) => {
-  const { status } = useAccount(); // Obtiene el estado de la cuenta
-  // const contractAddress: `0x${string}` = ERC20_ADDRESS as `0x${string}`;
-  const [balance, setBalance] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const TokenBalance: React.FC<TokenBalanceProps> = ({ balance }) => {
+  let displayBalance = "0"; // Default display value
 
-  // Declarar el hook `useReadContract` fuera del condicional
-  const {
-    data,
-    error: contractError,
-    isLoading,
-  } = useReadContract({
-    abi: tokenAbi.abi,
-    address: contractAddress,
-    functionName: "balanceOf",
-    args: [address],
-    enabled: status === "connected", // Solo habilitar la consulta si está conectado
-    watch: true, // Habilita la actualización en tiempo real
-  });
-  const chainId = useChainId();
-  useEffect(() => {
-    if (contractError) {
-      // setBalance(0);
-      setError("Error al obtener el balance del contrato");
-    } else if (data) {
-      const formattedBalance = parseFloat(ethers.formatUnits(data, 6));
-      setBalance(formattedBalance);
-      setError(null);
+  if (balance != null) {
+    // Check for both null and undefined
+    try {
+      displayBalance = ethers.formatUnits(balance, 6);
+    } catch (error) {
+      console.error("Error formatting balance:", error);
+      displayBalance = "Error"; // Display an error message
     }
-  }, [data, contractError]);
-
-  if (isLoading) {
-    return <CircularProgress />;
   }
-
-  if (error) {
-    return <Typography color="error">{error}</Typography>;
-  }
-
   return (
     <Typography>
-      {balance !== null
-        ? `Balance: ${balance.toLocaleString()} tokens`
-        : "Cargando balance..."}
+      {balance !== null ? `Balance: ${displayBalance} tokens` : "Balance: 0"}
     </Typography>
   );
 };
@@ -1144,9 +905,12 @@ export {
 
 import { http, createConfig } from "wagmi";
 import {
+  arbitrumSepolia,
   fantomSonicTestnet,
+  fantomTestnet,
   mainnet,
   polygonAmoy,
+  polygonZkEvmCardona,
   sepolia,
 } from "wagmi/chains";
 import { injected, metaMask, safe } from "wagmi/connectors";
@@ -1190,6 +954,8 @@ export const config = createConfig({
     [sepolia.id]: http(),
     [fantomSonicTestnet.id]: http(), // Agregar transport para Fantom testnet
     [polygonAmoy.id]: http(),
+    [arbitrumSepolia.id]: http(),
+    [polygonZkEvmCardona.id]: http(),
     [localhost.id]: http(),
   },
 });
@@ -1204,163 +970,49 @@ interface ContractAddresses {
 export const contractAddressesMap: Record<number, ContractAddresses> = {
   // Ejemplo para localhost (chainId: 41337)
   41337: {
-    ERC20_ADDRESS:
-      (process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS as `0x${string}`) || "",
-    STAKING_ADDRESS:
-      (process.env.NEXT_PUBLIC_LOCAL_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env.NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS as `0x${string}`) || "",
+    ERC20_ADDRESS: process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS as `0x${string}`,
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_LOCAL_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS as `0x${string}`,
   },
   // Ejemplo para Sepolia (chainId: 11155111)
   11155111: {
-    ERC20_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS as `0x${string}`) || "",
-    STAKING_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS as `0x${string}`) || "",
-  },
+    ERC20_ADDRESS: process.env
+      .NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS as `0x${string}`,
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS as `0x${string}`,
+  }, // Ethereum Sepolia
   // Añade más configuraciones para otras redes según sea necesario
   4002: {
     ERC20_ADDRESS:
       (process.env.NEXT_PUBLIC_FANTOM_TESTNET_ERC20_ADDRESS as `0x${string}`) ||
       "",
-    STAKING_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS as `0x${string}`) || "",
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS as `0x${string}`,
   }, // Fantom Testnet
   80002: {
-    ERC20_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS as `0x${string}`) || "",
-    STAKING_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS as `0x${string}`) || "",
-    FAUCET_ADDRESS:
-      (process.env
-        .NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS as `0x${string}`) || "",
-  }, // Polygon Testnet
+    ERC20_ADDRESS: process.env
+      .NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS as `0x${string}`,
+    STAKING_ADDRESS: process.env
+      .NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS as `0x${string}`,
+    FAUCET_ADDRESS: process.env
+      .NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS as `0x${string}`,
+  }, // Polygon Amoy
+  421614: {}, // Arbitrum Sepolia
 };
 
-export function getContractAddresses(
-  chainId: number
-): ContractAddresses | null {
-  return contractAddressesMap[chainId] || null;
+export function getContractAddresses(chainId: number): ContractAddresses {
+  return contractAddressesMap[chainId] || contractAddressesMap[11155111];
 }
 
 export function getConfig() {
   return config;
 }
-
-// import { http, createConfig, createStorage } from "wagmi";
-// import {
-//   fantomSonicTestnet,
-//   mainnet,
-//   polygonAmoy,
-//   sepolia,
-// } from "wagmi/chains";
-// import { injected, metaMask, safe } from "wagmi/connectors";
-// import { defineChain } from "viem";
-
-// import { config as dotenvConfig } from "dotenv";
-// dotenvConfig();
-
-// // Definir la red personalizada localhost con chainId 41337
-// const localhost = defineChain({
-//   id: 41337,
-//   name: "Localhost 41337",
-//   network: "localhost",
-//   nativeCurrency: {
-//     name: "Ethereum",
-//     symbol: "ETH",
-//     decimals: 18,
-//   },
-//   rpcUrls: {
-//     default: {
-//       http: ["http://127.0.0.1:8545"], // URL de tu nodo local (Hardhat, Ganache, etc.)
-//     },
-//     public: {
-//       http: ["http://127.0.0.1:8545"],
-//     },
-//   },
-//   blockExplorers: {
-//     default: { name: "Localhost Explorer", url: "http://127.0.0.1:8545" },
-//   },
-//   testnet: true, // Marcar como testnet
-// });
-
-// // Configurar wagmi con las cadenas
-// export const config = createConfig({
-//   chains: [mainnet, sepolia, fantomSonicTestnet, polygonAmoy], //localhost], // Agregar la red localhost
-
-//   multiInjectedProviderDiscovery: true,
-//   // multiInjectedProviderDiscovery: false,
-//   ssr: true, // is in server side rendering?
-//   // storage: createStorage({ storage: window.localStorage }),
-//   connectors: [injected(), metaMask(), safe()],
-//   // connectors: [metaMask(), safe()],
-//   transports: {
-//     [mainnet.id]: http(),
-//     [sepolia.id]: http(),
-//     [fantomSonicTestnet.id]: http(), // Agregar transport para Fantom testnet
-//     [polygonAmoy.id]: http(),
-//     // Si quieres volver a incluir localhost:
-//     [localhost.id]: http(),
-//   },
-// });
-
-// const targetNetwork = process.env.NEXT_PUBLIC_TARGET_NETWORK || "localhost";
-
-// let ERC20_ADDRESS = "";
-// let STAKING_ADDRESS = "";
-// let FAUCET_ADDRESS = "";
-// let targetChainId: bigint;
-
-// switch (targetNetwork) {
-//   case "fantomTestnet":
-//     ERC20_ADDRESS = process.env.NEXT_PUBLIC_FANTOM_TESTNET_ERC20_ADDRESS || "";
-//     STAKING_ADDRESS =
-//       process.env.NEXT_PUBLIC_FANTOM_TESTNET_STAKING_ADDRESS || "";
-//     FAUCET_ADDRESS =
-//       process.env.NEXT_PUBLIC_FANTOM_TESTNET_FAUCET_ADDRESS || "";
-//     targetChainId = 4002n;
-//     break;
-//   case "sepolia":
-//     ERC20_ADDRESS = process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_ERC20_ADDRESS || "";
-//     STAKING_ADDRESS =
-//       process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_STAKING_ADDRESS || "";
-//     FAUCET_ADDRESS =
-//       process.env.NEXT_PUBLIC_SEPOLIA_TESTNET_FAUCET_ADDRESS || "";
-//     targetChainId = 11155111n;
-//     break;
-//   case "polygonTestnet":
-//     ERC20_ADDRESS = process.env.NEXT_PUBLIC_POLYGON_TESTNET_ERC20_ADDRESS || "";
-//     STAKING_ADDRESS =
-//       process.env.NEXT_PUBLIC_POLYGON_TESTNET_STAKING_ADDRESS || "";
-//     FAUCET_ADDRESS =
-//       process.env.NEXT_PUBLIC_POLYGON_TESTNET_FAUCET_ADDRESS || "";
-//     targetChainId = 80002n;
-//     break;
-//   case "localhost":
-//   default:
-//     ERC20_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_ERC20_ADDRESS || "";
-//     STAKING_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_STAKING_ADDRESS || "";
-//     FAUCET_ADDRESS = process.env.NEXT_PUBLIC_LOCAL_FAUCET_ADDRESS || "";
-//     targetChainId = 41337n;
-//     break;
-// }
-
-// export { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS, targetChainId };
-
-// export function getConfig() {
-//   return config;
-// }
 
 
 // Path: src/hooks/useContractAddresses.ts
@@ -1376,15 +1028,10 @@ export interface IContractAddresses {
   FAUCET_ADDRESS: `0x${string}`;
 }
 
-export function useContractAddresses(): IContractAddresses | null {
+export function useContractAddresses(): IContractAddresses {
   const chainId = useChainId();
   console.log(chainId);
   const addresses = getContractAddresses(chainId);
-
-  if (!addresses) {
-    console.warn(`No contract addresses defined for chainId: ${chainId}`);
-    return null;
-  }
 
   return addresses;
 }
@@ -1396,6 +1043,7 @@ import {
   useWriteContract,
   useReadContract,
   useWaitForTransactionReceipt,
+  useAccount,
 } from "wagmi";
 import { parseEther } from "viem";
 import tokenAbi from "../../../abis/MyToken.json";
@@ -1410,7 +1058,15 @@ export const useStaking = (
   const { isLoading: isWaitingForApproval } = useWaitForTransactionReceipt({
     hash: approvalHash,
   });
-
+  const account = useAccount();
+  const { data: stakedAmount, refetch } = useReadContract({
+    address: stakingAddress,
+    abi: stakingAbi.abi, // ¡IMPORTANTE!
+    functionName: "getStakedAmount",
+    args: [account.address], // Manejo de undefined para el argumento
+    // enabled: !!stakingAddress,
+    // watch: true,
+  });
   const { data: allowanceData } = useReadContract({
     address: tokenAddress,
     abi: tokenAbi.abi,
@@ -1494,52 +1150,5 @@ const theme = createTheme({
 });
 
 export default theme;
-
-
-// Path: src/utils/web3Utils.ts
-
-/* eslint-disable react-hooks/rules-of-hooks */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
-//utils/web3Utils.ts
-"use client";
-
-import { ethers } from "ethers";
-// import { useReadContract } from "wagmi";
-// import Web3Modal, { IProviderOptions, IProviderDisplay } from "web3modal";
-import tokenAbi from "../../../abis/MyToken.json";
-import faucetAbi from "../../../abis/Faucet.json";
-import stakingAbi from "../../../abis/Staking.json";
-
-import { ERC20_ADDRESS, STAKING_ADDRESS, FAUCET_ADDRESS } from "../config";
-import { Config, UseAccountReturnType, UseReadContractParameters } from "wagmi";
-import { WriteContractMutate } from "wagmi/query";
-import { useReadContract } from "wagmi";
-
-export const logout = (
-  setAccount: Function,
-  setProvider: Function,
-  setSigner: Function,
-  setIsConnected: Function,
-  setBalance: Function,
-  setStakedAmount: Function,
-  setStakingStart: Function,
-  setStakingRewards: Function,
-  setCurrentChainId: Function,
-  setError: Function,
-  setTxHash: Function
-) => {
-  setAccount(null);
-  setProvider(null);
-  setSigner(null);
-  setIsConnected(false);
-  setBalance(0);
-  setStakedAmount(0);
-  setStakingStart(null);
-  setStakingRewards(0);
-  setCurrentChainId(null);
-  setError(null);
-  setTxHash(null);
-};
 
 

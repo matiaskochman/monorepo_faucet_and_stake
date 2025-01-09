@@ -5,7 +5,7 @@ import {
   useAccount,
 } from "wagmi";
 import { parseEther } from "viem";
-import tokenAbi from "../../../abis/MyToken.json";
+import tokenAbi from "../../../abis/PesosArgToken.json";
 import stakingAbi from "../../../abis/Staking.json";
 
 export const useStaking = (

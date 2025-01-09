@@ -13,7 +13,7 @@ import { ethers } from "ethers";
 // import { useStaking } from "../../hooks/useStake";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import tokenAbi from "../../../../abis/MyToken.json";
+import tokenAbi from "../../../../abis/PesosArgToken.json";
 import stakingAbi from "../../../../abis/Staking.json";
 
 interface StakingComponentProps {
@@ -116,6 +116,7 @@ export const StakingComponent: React.FC<StakingComponentProps> = ({
         abi: stakingAbi.abi,
         functionName: "unstake",
         args: [amountInTokens],
+        type: "eip1559",
       });
       setError(null);
     } else {

@@ -1,6 +1,7 @@
 // Path: src/hooks/useContractAddresses.ts
 
 import { useChainId } from "wagmi";
+import { useAccount } from "wagmi";
 import { getContractAddresses } from "@/config";
 
 export interface IContractAddresses {
@@ -11,8 +12,11 @@ export interface IContractAddresses {
 
 export function useContractAddresses(): IContractAddresses {
   const chainId = useChainId();
-  console.log(chainId);
-  const addresses = getContractAddresses(chainId);
+  const account = useAccount();
+
+  console.log("usechainId: ", chainId);
+  console.log("account.chainId: ", account?.chainId);
+  const addresses = getContractAddresses(account?.chainId);
 
   return addresses;
 }

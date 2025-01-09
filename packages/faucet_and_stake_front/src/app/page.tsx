@@ -15,7 +15,7 @@ import TokenBalance from "@/components/ui/TokenBalance";
 import ClaimTokens from "@/components/ui/ClaimTokens";
 import { useContractAddresses } from "@/hooks/useContractAddresses";
 import { StakingComponent } from "@/components/ui/Staking";
-import tokenAbi from "../../../abis/MyToken.json";
+import tokenAbi from "../../../abis/PesosArgToken.json";
 import stakingAbi from "../../../abis/Staking.json";
 
 export default function Web3TokenDashboard() {
@@ -23,11 +23,20 @@ export default function Web3TokenDashboard() {
   const { disconnect } = useDisconnect();
   const account = useAccount();
   const contractAddresses = useContractAddresses();
-  // const [getTokenBalance, setTokenBalance] = useState<string>("");
   const [getAddress, setAddress] = useState<`0x${string}` | undefined>("0x0");
-  // const [getERC20ContractAddress, setERC20ContractAddress] = useState<
-  //   `0x${string}` | undefined
-  // >("0x0");
+
+  useEffect(() => {
+    setAddress(account.address);
+    refetchTokenBalance();
+    refetchStakedAmount();
+  }, [
+    account.address,
+    account.chainId,
+    // refetchTokenBalance,
+    // refetchStakedAmount,
+    // tokenBalanceValue,
+    // stakedData,
+  ]);
 
   const {
     data: tokenBalanceValue,
@@ -39,7 +48,7 @@ export default function Web3TokenDashboard() {
     address: contractAddresses.ERC20_ADDRESS,
     functionName: "balanceOf",
     args: [getAddress],
-    enabled: account.isConnected, // Solo habilitar la consulta si está conectado
+    enabled: !!contractAddresses && account?.isConnected, // Solo habilitar la consulta si está conectado
     // watch: true, // Habilita la actualización en tiempo real
   });
 
@@ -56,20 +65,6 @@ export default function Web3TokenDashboard() {
     // enabled: !!stakingAddress,
     // watch: true,
   });
-
-  useEffect(() => {
-    setAddress(account.address);
-    refetchTokenBalance();
-    refetchStakedAmount();
-  }, [
-    account.address,
-    account.chainId,
-    tokenBalanceValue,
-    stakedData,
-    refetchTokenBalance,
-    refetchStakedAmount,
-  ]);
-
   // Manejar la conexión y desconexión
   const handleConnect = (connectorId: string) => {
     const connector = connectors.find((c) => c.id === connectorId);
@@ -101,6 +96,10 @@ export default function Web3TokenDashboard() {
     );
   }
 
+  if (!!contractAddresses && !!account.isConnected) {
+    console.log("aqui");
+    console.log(account.chainId);
+  }
   return (
     <Box
       sx={{
@@ -191,7 +190,11 @@ export default function Web3TokenDashboard() {
           {/* Componente ClaimTokens */}
           {account.isConnected && contractAddresses && (
             <Box sx={{ mt: 2 }}>
-              <ClaimTokens contractAddress={contractAddresses.FAUCET_ADDRESS} />
+              <ClaimTokens
+                contractAddress={contractAddresses.FAUCET_ADDRESS}
+                refetchTokenBalance={refetchTokenBalance}
+                refetchStakedBalance={refetchStakedAmount}
+              />
             </Box>
           )}
 

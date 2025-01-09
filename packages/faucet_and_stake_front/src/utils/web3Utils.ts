@@ -7,7 +7,7 @@
 import { ethers } from "ethers";
 // import { useReadContract } from "wagmi";
 // import Web3Modal, { IProviderOptions, IProviderDisplay } from "web3modal";
-import tokenAbi from "../../../abis/MyToken.json";
+import tokenAbi from "../../../abis/PesosArgToken.json";
 import faucetAbi from "../../../abis/Faucet.json";
 import stakingAbi from "../../../abis/Staking.json";
 

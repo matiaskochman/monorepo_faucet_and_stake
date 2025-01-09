@@ -12,7 +12,13 @@ import { join, relative } from "path";
 const srcDir = join(process.cwd(), "src");
 const outputFile = join(process.cwd(), "output.txt");
 const excludeDirs = ["fonts", "abis"];
-const excludeFiles = ["favicon.ico", "globals.css", "layout.tsx"];
+const excludeFiles = [
+  "favicon.ico",
+  "globals.css",
+  "layout.tsx",
+  "readFiles.js",
+  "web3Utils.ts",
+];
 const rootFiles = [
   // ".env",
   // "tsconfig.json",
