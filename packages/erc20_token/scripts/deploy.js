@@ -75,13 +75,13 @@ async function main() {
     console.log("Contrato Staking verificado en la blockchain.");
   }
 
-  // Transferir la propiedad de PesosArgToken al Faucet
-  console.log("Transfiriendo propiedad de PesosArgToken al Faucet...");
-  const transferOwnershipTx = await pesosArgToken.transferOwnership(
-    faucetAddress
-  );
-  await transferOwnershipTx.wait();
-  console.log("Propiedad de PesosArgToken transferida al Faucet.");
+  // // Transferir la propiedad de PesosArgToken al Faucet
+  // console.log("Transfiriendo propiedad de PesosArgToken al Faucet...");
+  // const transferOwnershipTx = await pesosArgToken.transferOwnership(
+  //   faucetAddress
+  // );
+  // await transferOwnershipTx.wait();
+  // console.log("Propiedad de PesosArgToken transferida al Faucet.");
 
   // Definir el hash del rol MINTER_ROLE
   const MINTER_ROLE = hre.ethers.keccak256(
