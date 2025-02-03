@@ -5,12 +5,32 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  // const [deployer] = await hre.ethers.getSigners();
-  // Obtener la dirección específica
-  const specificAddress = "0x432Bcf17BC6F3c298a624fEcfdb608c3cacd121d";
-  // Obtener el signer desde esa dirección (asumiendo que está en las accounts de la red)
-  const deployer = await hre.ethers.getSigner(specificAddress);
+  let deployer;
 
+  // Detectar la red actual
+  const network = hre.network.name;
+  console.log(`Red seleccionada: ${network}`);
+
+  if (network === "localhost") {
+    // Obtener la primera cuenta disponible en localhost (Cuenta #0)
+    [deployer] = await hre.ethers.getSigners();
+    console.log("Usando la cuenta por defecto de localhost:", deployer.address);
+  } else {
+    // Dirección específica para otras redes
+    const specificAddress = "0x432Bcf17BC6F3c298a624fEcfdb608c3cacd121d";
+
+    // Intentar obtener el signer desde la dirección específica
+    try {
+      deployer = await hre.ethers.getSigner(specificAddress);
+      console.log("Usando la cuenta específica:", deployer.address);
+    } catch (error) {
+      console.error(
+        `No se pudo obtener el signer para la dirección específica: ${specificAddress}. Asegúrate de que la cuenta esté disponible en la red ${network}.`,
+        error
+      );
+      return;
+    }
+  }
   console.log("Desplegando contratos con la cuenta:", deployer.address);
 
   // Desplegar PesosArgToken
@@ -74,14 +94,6 @@ async function main() {
   } else {
     console.log("Contrato Staking verificado en la blockchain.");
   }
-
-  // // Transferir la propiedad de PesosArgToken al Faucet
-  // console.log("Transfiriendo propiedad de PesosArgToken al Faucet...");
-  // const transferOwnershipTx = await pesosArgToken.transferOwnership(
-  //   faucetAddress
-  // );
-  // await transferOwnershipTx.wait();
-  // console.log("Propiedad de PesosArgToken transferida al Faucet.");
 
   // Definir el hash del rol MINTER_ROLE
   const MINTER_ROLE = hre.ethers.keccak256(
