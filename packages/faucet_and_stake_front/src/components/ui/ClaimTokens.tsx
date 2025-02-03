@@ -17,11 +17,9 @@ const ClaimTokens: React.FC<ClaimTokensProps> = ({
   contractAddress,
   refetchTokenBalance,
   refetchStakedBalance,
-}: {
-  contractAddress: `0x${string}`;
-}) => {
+}: ClaimTokensProps) => {
   const [loading, setLoading] = useState(false);
-  const { data: hash, writeContractAsync, writeContract } = useWriteContract();
+  const { data: hash, writeContractAsync } = useWriteContract();
 
   const handleClaimTokens = async () => {
     setLoading(true);
